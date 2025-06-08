@@ -1,0 +1,50 @@
+{
+  "name": "cv",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --env-file .env server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.802.0",
+    "@aws-sdk/s3-request-presigner": "^3.802.0",
+    "axios": "^1.7.7",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-fileupload": "^1.5.1",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "js-sha256": "^0.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "knex-paginate": "^3.1.4",
+    "lodash": "^4.17.21",
+    "pg": "^8.12.0",
+    "redis": "^4.7.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "prettier": "^3.5.1"
+  },
+  "imports": {
+    "#root/*.js": "./*.js",
+    "#constants/*.js": "./constants/*.js",
+    "#controllers/*.js": "./controllers/*.js",
+    "#middleware/*.js": "./middleware/*.js",
+    "#models/*.js": "./models/*.js",
+    "#routes/*.js": "./routes/*.js",
+    "#services/*.js": "./services/*.js",
+    "#utils/*.js": "./utils/*.js"
+  }
+}
