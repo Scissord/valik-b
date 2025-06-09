@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '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'
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export const getConstructionAssistantResponse = async (question) => {
