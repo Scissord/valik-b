@@ -3,53 +3,6 @@ import * as Brand from '#models/brand.js';
 import * as Category from '#models/category.js';
 import * as Unit from '#models/unit.js';
 
-export const getForSuppliers = async (req, res) => {
-  try {
-    const products = await Product.get();
-    res.status(200).send({ message: 'ok', cities });
-  } catch (err) {
-    console.log('Error in get city controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
-export const createForSuppliers = async (req, res) => {
-  try {
-    const data = req.body;
-    const city = await Product.create(data);
-
-    return res.status(200).send({ message: 'ok', city });
-  } catch (err) {
-    console.log('Error in create city controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
-export const updateForSuppliers = async (req, res) => {
-  try {
-    const { city_id } = req.params;
-    const data = req.body;
-    const city = await Product.update(city_id, data);
-
-    res.status(200).send({ message: 'ok', city });
-  } catch (err) {
-    console.log('Error in update city controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
-export const softDeleteForSuppliers = async (req, res) => {
-  try {
-    const { city_id } = req.params;
-    const city = await Product.softDelete(city_id);
-
-    res.status(200).send({ message: 'ok', city });
-  } catch (err) {
-    console.log('Error in softDelete product controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
 export const getForMainPage = async (req, res) => {
   const { limit, page } = req.query;
 

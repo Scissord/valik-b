@@ -49,7 +49,8 @@ export const seed = async knex => {
         unit_id: 1,
         description: 'Очень хороший товар!',
         price: 100,
-        category_id: category.id // Привязка к категории
+        supplier_id: Math.floor(Math.random() * 3) + 1,
+        category_id: category.id
       });
     }
   }

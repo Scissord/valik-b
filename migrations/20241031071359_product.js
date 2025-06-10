@@ -10,6 +10,7 @@ export const up = function (knex) {
     table.integer('brand_id').notNullable();
     table.integer('unit_id').notNullable();
     table.integer('category_id').notNullable();
+    table.integer('supplier_id').notNullable();
     table.tinyint('rating').defaultTo(0);
     table.integer('article').nullable();
 

@@ -5,7 +5,7 @@ const db = knex();
 const productRepository = repository('product');
 
 export const getForMainPage = async (limit = 9, page = 1) => {
-  const result = await db('product as p').orderBy('id', 'asc').paginate({
+  const result = await db('product as p').whereNull('p.deleted_at').orderBy('id', 'asc').paginate({
     perPage: limit,
     currentPage: page,
     isLengthAware: true
@@ -30,6 +30,7 @@ export const getForCategory = async (limit = 9, page = 1, category_id) => {
   const result = await db('product as p')
     .orderBy('id', 'asc')
     .where('p.category_id', category_id)
+    .whereNull('p.deleted_at')
     .paginate({
       perPage: limit,
       currentPage: page,
@@ -47,8 +48,33 @@ export const getForCategory = async (limit = 9, page = 1, category_id) => {
   };
 };
 
+export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
+  const result = await db('product as p')
+    .select('p.*')
+    .whereNull('p.deleted_at')
+    .where('p.supplier_id', supplier_id)
+    .orderBy('p.id', 'asc')
+    .paginate({
+      perPage: limit,
+      currentPage: page,
+      isLengthAware: true
+    });
+
+  const { total, lastPage } = result.pagination;
+
+  return {
+    products: result.data,
+    total,
+    totalPages: lastPage
+  };
+};
+
 export const get = async () => {
   return await productRepository.getActive();
+};
+
+export const getWhere = async query => {
+  return await productRepository.getWhere(query);
 };
 
 export const create = async data => {

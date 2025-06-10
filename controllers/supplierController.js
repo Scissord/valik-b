@@ -2,10 +2,11 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import * as Supplier from '#models/supplier.js';
 import * as SupplierToken from '#models/supplier_token.js';
+import * as Product from '#models/product.js';
 import generateTokens from '#utils/generateTokens.js';
 
 export const supplierLogin = async (req, res) => {
-  const { login, password } = req.body;
+  let { login, password } = req.body;
 
   login = login.trim();
   password = password.trim();
@@ -38,9 +39,9 @@ export const supplierLogin = async (req, res) => {
   // 4. save refreshToken in DB
   const supplier_token = await SupplierToken.findWhere({ supplier_id: supplier.id });
 
-  if (user_token) {
+  if (supplier_token) {
     await SupplierToken.updateWhere(
-      { user_id: user.id },
+      { supplier_id: supplier.id },
       {
         refresh_token: refreshToken,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 дней
@@ -77,7 +78,7 @@ export const supplierLogin = async (req, res) => {
 export const supplierLogout = async (req, res) => {
   res.cookie('refreshToken', '', { maxAge: 0 });
   console.log('logout successfully');
-  res.status(200).send({ message: 'ok' });
+  res.status(200).send({ message: 'Successfully logout' });
 };
 
 export const supplierRefresh = async (req, res) => {
@@ -131,5 +132,59 @@ export const supplierRefresh = async (req, res) => {
     res.status(401).send({
       message: 'Сессия окончена!'
     });
+  }
+};
+
+export const getProducts = async (req, res) => {
+  try {
+    const { limit, page } = req.query;
+    const supplier_id = req.supplier.id;
+
+    const data = await Product.getForSupplier(limit, page, supplier_id);
+    res.status(200).send(data);
+  } catch (err) {
+    console.log('Error in get products for suppliers controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const createProduct = async (req, res) => {
+  try {
+    const supplier_id = req.supplier.id;
+    const data = req.body;
+    const product = await Product.create({
+      ...data,
+      supplier_id
+    });
+
+    return res.status(200).send(product);
+  } catch (err) {
+    console.log('Error in create product for supplier controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    const product = await Product.update(id, data);
+
+    res.status(200).send(product);
+  } catch (err) {
+    console.log('Error in update product for supplier controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.softDelete(id);
+
+    res.status(200).send(product);
+  } catch (err) {
+    console.log('Error in delete product for supplier controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
   }
 };

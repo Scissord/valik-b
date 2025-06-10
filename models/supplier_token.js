@@ -16,6 +16,10 @@ export const update = async (id, data) => {
   return await supplierTokenRepository.update(id, data);
 };
 
+export const updateWhere = async (query, data) => {
+  return await supplierTokenRepository.updateWhere(query, data);
+};
+
 export const softDelete = async id => {
   return await supplierTokenRepository.softDelete(id);
 };
