@@ -42,21 +42,27 @@ const repository = tableName => {
 
     // update record data by id
     update: async (id, data) => {
-      data.updated_at = Math.floor(Date.now() / 1000);
+      if (!data.updated_at) {
+        data.updated_at = new Date();
+      }
       const [updatedRecord] = await db(tableName).where('id', id).update(data).returning('*');
 
       return updatedRecord;
     },
 
     updateWhere: async (query, data) => {
-      data.updated_at = Math.floor(Date.now() / 1000);
+      if (!data.updated_at) {
+        data.updated_at = new Date();
+      }
       const [updatedRecord] = await db(tableName).where(query).update(data).returning('*');
 
       return updatedRecord;
     },
 
     updateWhereIn: async (ids, data) => {
-      data.updated_at = Math.floor(Date.now() / 1000);
+      if (!data.updated_at) {
+        data.updated_at = new Date();
+      }
       const updatedRecords = await db(tableName).whereIn('id', ids).update(data).returning('*');
 
       return updatedRecords;
@@ -64,10 +70,9 @@ const repository = tableName => {
 
     // soft delete record by id
     softDelete: async id => {
-      const timestamp = Math.floor(Date.now() / 1000);
       const [deletedRecord] = await db(tableName)
         .where('id', id)
-        .update('deleted_at', timestamp)
+        .update('deleted_at', new Date())
         .returning('*');
 
       return deletedRecord;

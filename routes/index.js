@@ -7,6 +7,7 @@ import paymentMethodRoutes from './paymentMethodRoute.js';
 import awsRoutes from './awsRoute.js';
 import categoryRoutes from './categoryRoute.js';
 import assistantRoutes from './assistantRoute.js';
+import chatRoutes from './chatRoute.js';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/payment_methods', paymentMethodRoutes);
 router.use('/aws', awsRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/api/assistant', assistantRoutes);
+router.use('/api/chats', chatRoutes);
 // router.use('/uploads', express.static('uploads'));
 
 export default router;
