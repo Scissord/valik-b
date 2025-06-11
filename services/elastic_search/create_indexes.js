@@ -10,7 +10,7 @@ async function create_indexes() {
     } catch (err) {
       if (err.meta?.statusCode !== 404) console.error(`Ошибка удаления индекса ${index}:`, err);
     }
-  }
+  };
 
   const products = await Product.getForSearch();
   const brands = await Brand.getForSearch();
