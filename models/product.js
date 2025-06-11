@@ -69,6 +69,11 @@ export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
   };
 };
 
+export const getForSearch = async () => {
+  return await db('product as p')
+    .select('p.id', 'p.title')
+};
+
 export const get = async () => {
   return await productRepository.getActive();
 };

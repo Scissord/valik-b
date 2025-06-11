@@ -37,6 +37,11 @@ export const getForDispatcher = async client_id => {
     .orderBy('o.id', 'desc');
 };
 
+export const getForSearch = async () => {
+  return await db('category as c')
+    .select('c.id', 'c.title')
+};
+
 export const getAll = async () => {
   return await categoryRepository.getActive();
 };

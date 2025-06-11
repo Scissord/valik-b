@@ -8,6 +8,7 @@ import categoryRoutes from './categoryRoute.js';
 import assistantRoutes from './assistantRoute.js';
 import supplierRoutes from './supplierRoute.js';
 import chatRoutes from './chatRoute.js';
+import searchRoutes from './searchRoute.js';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.use('/categories', categoryRoutes);
 router.use('/api/assistant', assistantRoutes);
 router.use('/suppliers', supplierRoutes);
 router.use('/api/chats', chatRoutes);
+router.use('/search', searchRoutes);
 // router.use('/uploads', express.static('uploads'));
 
 export default router;

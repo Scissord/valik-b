@@ -8,6 +8,11 @@ export const get = async () => {
   return await brandRepository.getActive();
 };
 
+export const getForSearch = async () => {
+  return await db('brand as b')
+    .select('b.id', 'b.title')
+};
+
 export const create = async data => {
   return await brandRepository.create(data);
 };
