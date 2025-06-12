@@ -3,7 +3,6 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import crypto from 'crypto';
 import path from 'path';
 
-// Инициализация клиента S3
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
