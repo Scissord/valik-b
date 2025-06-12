@@ -1,11 +1,10 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import * as Supplier from '#models/supplier.js';
-import * as SupplierToken from '#models/supplier_token.js';
-import * as Product from '#models/product.js';
-import generateTokens from '#utils/tokens/generateSupplierTokens.js';
+import * as User from '#models/user.js';
+import * as UserToken from '#models/user_token.js';
+import generateTokens from '#utils/tokens/generateUserTokens.js';
 
-export const supplierLogin = async (req, res) => {
+export const userLogin = async (req, res) => {
   let { login, password } = req.body;
 
   login = login.trim();
@@ -17,40 +16,40 @@ export const supplierLogin = async (req, res) => {
     return;
   }
 
-  // 2. Find supplier in database
-  const supplier = await Supplier.findWhereActive({ login });
+  // 2. Find user in database
+  const user = await User.findWhereActive({ login });
 
-  // 3. If supplier is not found
-  if (!supplier) {
+  // 3. If user is not found
+  if (!user) {
     res.status(400).send({ message: 'Данный поставщик не найден!' });
     return;
   }
 
   // 4. Check if password is correct
-  const isPasswordCorrect = await bcrypt.compare(password, supplier?.password || '');
+  const isPasswordCorrect = await bcrypt.compare(password, user?.password || '');
 
   if (!isPasswordCorrect) {
     res.status(400).send({ message: 'Неверный пароль!' });
     return;
   }
 
-  const { accessToken, refreshToken } = generateTokens(supplier.id);
+  const { accessToken, refreshToken } = generateTokens(user.id);
 
   // 4. save refreshToken in DB
-  const supplier_token = await SupplierToken.findWhere({ supplier_id: supplier.id });
+  const user_token = await UserToken.findWhere({ user_id: user.id });
   const expires_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  if (supplier_token) {
-    await SupplierToken.updateWhere(
-      { supplier_id: supplier.id },
+  if (user_token) {
+    await UserToken.updateWhere(
+      { user_id: user.id },
       {
         refresh_token: refreshToken,
         expires_at
       }
     );
   } else {
-    await SupplierToken.create({
-      supplier_id: supplier.id,
+    await UserToken.create({
+      user_id: user.id,
       refresh_token: refreshToken,
       expires_at
     });
@@ -71,37 +70,37 @@ export const supplierLogin = async (req, res) => {
 
   res.status(200).send({
     message: 'ok',
-    supplier,
+    user,
     accessToken
   });
 };
 
-export const supplierRegistration = async (req, res) => {
+export const userRegistration = async (req, res) => {
   const data = req.body;
 
   const salt = await bcrypt.genSalt(10);
   data.password = await bcrypt.hash(data.password, salt);
 
-  const supplier = await Supplier.create(data);
-  delete supplier.password;
+  const user = await User.create(data);
+  delete user.password;
 
-  const { accessToken, refreshToken } = generateTokens(supplier.id);
+  const { accessToken, refreshToken } = generateTokens(user.id);
 
-  const supplier_token = await SupplierToken.findWhere({ supplier_id: supplier.id });
+  const user_token = await UserToken.findWhere({ user_id: user.id });
 
   const expires_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  if (supplier_token) {
-    await SupplierToken.updateWhere(
-      { supplier_id: supplier.id },
+  if (user_token) {
+    await UserToken.updateWhere(
+      { user_id: user.id },
       {
         refresh_token: refreshToken,
         expires_at
       }
     );
   } else {
-    await SupplierToken.create({
-      supplier_id: supplier.id,
+    await UserToken.create({
+      user_id: user.id,
       refresh_token: refreshToken,
       expires_at
     });
@@ -115,19 +114,19 @@ export const supplierRegistration = async (req, res) => {
   });
 
   res.status(200).send({
-    message: 'Supplier created successfully',
+    message: 'User created successfully',
     accessToken,
-    supplier
+    user
   });
 };
 
-export const supplierLogout = async (req, res) => {
+export const userLogout = async (req, res) => {
   res.cookie('refreshToken', '', { maxAge: 0 });
   console.log('logout successfully');
   res.status(200).send({ message: 'Successfully logout' });
 };
 
-export const supplierRefresh = async (req, res) => {
+export const userRefresh = async (req, res) => {
   // 1. check for refreshToken
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken)
@@ -139,23 +138,23 @@ export const supplierRefresh = async (req, res) => {
   try {
     const decodedRefresh = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    // 3. Check if supplier exist
-    const supplier = await Supplier.find(decodedRefresh.supplierId);
+    // 3. Check if user exist
+    const user = await User.find(decodedRefresh.userId);
 
-    if (!supplier)
+    if (!user)
       return res.status(401).send({
         message: 'Поставщик не найден!'
       });
 
-    // 4. if supplier exist and we get decodedRefresh, we generate JWT TOKEN
+    // 4. if user exist and we get decodedRefresh, we generate JWT TOKEN
     const { accessToken: newAccessToken, refreshToken: newRefreshToken } = generateTokens(
-      supplier.id
+      user.id
     );
 
     const expires_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
     // 5. save refreshToken in DB
-    await SupplierToken.updateWhere(
-      { supplier_id: supplier.id },
+    await UserToken.updateWhere(
+      { user_id: user.id },
       {
         refresh_token: newRefreshToken,
         expires_at
@@ -179,59 +178,5 @@ export const supplierRefresh = async (req, res) => {
     res.status(401).send({
       message: 'Сессия окончена!'
     });
-  }
-};
-
-export const getProducts = async (req, res) => {
-  try {
-    const { limit, page } = req.query;
-    const supplier_id = req.supplier.id;
-
-    const data = await Product.getForSupplier(limit, page, supplier_id);
-    res.status(200).send(data);
-  } catch (err) {
-    console.log('Error in get products for suppliers controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
-export const createProduct = async (req, res) => {
-  try {
-    const supplier_id = req.supplier.id;
-    const data = req.body;
-    const product = await Product.create({
-      ...data,
-      supplier_id
-    });
-
-    return res.status(200).send(product);
-  } catch (err) {
-    console.log('Error in create product for supplier controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
-export const updateProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const data = req.body;
-    const product = await Product.update(id, data);
-
-    res.status(200).send(product);
-  } catch (err) {
-    console.log('Error in update product for supplier controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
-  }
-};
-
-export const deleteProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.softDelete(id);
-
-    res.status(200).send(product);
-  } catch (err) {
-    console.log('Error in delete product for supplier controller', err.message);
-    res.status(500).send({ error: 'Internal Server Error' });
   }
 };

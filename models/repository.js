@@ -43,7 +43,7 @@ const repository = tableName => {
     // update record data by id
     update: async (id, data) => {
       if (!data.updated_at) {
-        data.updated_at = new Date();
+        data.updated_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
       }
       const [updatedRecord] = await db(tableName).where('id', id).update(data).returning('*');
 
@@ -52,7 +52,7 @@ const repository = tableName => {
 
     updateWhere: async (query, data) => {
       if (!data.updated_at) {
-        data.updated_at = new Date();
+        data.updated_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
       }
       const [updatedRecord] = await db(tableName).where(query).update(data).returning('*');
 
@@ -61,7 +61,7 @@ const repository = tableName => {
 
     updateWhereIn: async (ids, data) => {
       if (!data.updated_at) {
-        data.updated_at = new Date();
+        data.updated_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
       }
       const updatedRecords = await db(tableName).whereIn('id', ids).update(data).returning('*');
 
@@ -70,9 +70,11 @@ const repository = tableName => {
 
     // soft delete record by id
     softDelete: async id => {
+      const deleted_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
       const [deletedRecord] = await db(tableName)
         .where('id', id)
-        .update('deleted_at', new Date())
+        .update('deleted_at', deleted_at)
         .returning('*');
 
       return deletedRecord;

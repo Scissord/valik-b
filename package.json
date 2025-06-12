@@ -48,6 +48,7 @@
     "#models/*.js": "./models/*.js",
     "#routes/*.js": "./routes/*.js",
     "#services/*.js": "./services/*.js",
-    "#utils/*.js": "./utils/*.js"
+    "#utils/*.js": "./utils/*.js",
+    "#validations/*.js": "./validations/*.js"
   }
 }

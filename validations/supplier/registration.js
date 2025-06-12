@@ -1,9 +1,9 @@
-import { body } from 'express-validator';
 import knex from '#models/knex.js';
+import { body } from 'express-validator';
 
 const db = knex();
 
-export const loginValidation = [
+export const registrationValidation = [
   body('login')
     .isString()
     .withMessage('Логин должен быть строкой')
@@ -17,15 +17,14 @@ export const loginValidation = [
     })
     .withMessage('Логин не должен содержать пробелы')
     .custom(async (value) => {
-      const user = await db('user as u')
-        .select('u.*')
-        .where('u.login', value)
+      const user = await db('supplier as s')
+        .select('s.*')
+        .where('s.login', value)
         .first();
 
-      if (!user) {
-        throw new Error('Пользователь не найден');
+      if (user) {
+        throw new Error('Логин уже используется');
       }
-
       return true;
     }),
 

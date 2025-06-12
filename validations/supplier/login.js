@@ -17,9 +17,9 @@ export const loginValidation = [
     })
     .withMessage('Логин не должен содержать пробелы')
     .custom(async (value) => {
-      const user = await db('user as u')
-        .select('u.*')
-        .where('u.login', value)
+      const user = await db('supplier as s')
+        .select('s.*')
+        .where('s.login', value)
         .first();
 
       if (!user) {

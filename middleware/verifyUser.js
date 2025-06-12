@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
 import * as Supplier from '#models/supplier.js';
 
-const verifySupplier = async (req, res, next) => {
+const verify = async (req, res, next) => {
+  // should delete it
   // 401 - refresh access and refresh tokens, or throw away user from app
   try {
     // 1. Make sure you have accessToken;

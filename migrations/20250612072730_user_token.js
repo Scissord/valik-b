@@ -3,9 +3,9 @@
  * @returns { Promise<void> }
  */
 export const up = function (knex) {
-  return knex.schema.createTable('supplier_token', table => {
+  return knex.schema.createTable('user_token', table => {
     table.bigIncrements('id').primary();
-    table.bigInteger('supplier_id').notNullable();
+    table.bigInteger('user_id').notNullable();
     table.string('refresh_token', 255).notNullable();
     table.bigInteger('expires_at').notNullable();
 
@@ -24,5 +24,5 @@ export const up = function (knex) {
  * @returns { Promise<void> }
  */
 export const down = function (knex) {
-  return knex.schema.dropTable('supplier_token');
+  return knex.schema.dropTable('user_token');
 };

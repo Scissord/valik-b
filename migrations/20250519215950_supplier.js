@@ -5,7 +5,7 @@
 export const up = function (knex) {
   return knex.schema.createTable('supplier', table => {
     table.bigIncrements('id').primary();
-    table.string('login', 255).notNullable();
+    table.string('login', 255).notNullable().unique();
     table.string('password', 255).notNullable();
 
     table

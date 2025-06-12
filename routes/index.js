@@ -1,5 +1,6 @@
 import { Router } from 'express';
 // import express from 'express';
+import authRoutes from './authRoute.js';
 import productRoutes from './productRoute.js';
 import orderRoutes from './orderRoute.js';
 import paymentMethodRoutes from './paymentMethodRoute.js';
@@ -12,6 +13,7 @@ import searchRoutes from './searchRoute.js';
 
 const router = Router();
 
+router.use('/auth', authRoutes);
 router.use('/products', productRoutes);
 router.use('/orders', orderRoutes);
 router.use('/payment_methods', paymentMethodRoutes);

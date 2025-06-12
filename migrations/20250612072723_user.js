@@ -3,11 +3,16 @@
  * @returns { Promise<void> }
  */
 export const up = function (knex) {
-  return knex.schema.createTable('supplier_token', table => {
+  return knex.schema.createTable('user', table => {
     table.bigIncrements('id').primary();
-    table.bigInteger('supplier_id').notNullable();
-    table.string('refresh_token', 255).notNullable();
-    table.bigInteger('expires_at').notNullable();
+    table.string('login', 255).notNullable().unique();
+    table.string('password', 255).notNullable();
+    table.string('email', 255).notNullable().unique();
+    table.string('full_name', 255).notNullable();
+    table.string('phone', 20).nullable();
+    table.bigInteger('birth_date').nullable();
+    table.enum('gender', ['male', 'female']).nullable();
+    table.text('address').nullable();
 
     table
       .bigInteger('created_at')
@@ -24,5 +29,5 @@ export const up = function (knex) {
  * @returns { Promise<void> }
  */
 export const down = function (knex) {
-  return knex.schema.dropTable('supplier_token');
+  return knex.schema.dropTable('user');
 };
