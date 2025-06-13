@@ -16,6 +16,10 @@ export const get = async client_id => {
     .andWhere('o.client_id', client_id);
 };
 
+export const getWhere = async query => {
+  return await orderRepository.getWhere(query);
+};
+
 export const create = async data => {
   return await orderRepository.create(data);
 };

@@ -5,8 +5,7 @@
 export const up = function (knex) {
   return knex.schema.createTable('order', table => {
     table.uuid('id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
-    table.string('name', 255).notNullable();
-    table.string('phone', 255).notNullable();
+    table.bigInteger('user_id').notNullable();
     table.bigInteger('total').defaultTo(0);
     table.tinyint('status').defaultTo(0);
 
