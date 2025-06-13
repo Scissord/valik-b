@@ -7,7 +7,9 @@ const db = knex();
 const categoryRepository = repository('category');
 
 export const get = async () => {
-  const all_categories = await db('category as c').select('*').orderBy('id', 'asc');
+  const all_categories = await db('category as c')
+    .select('*')
+    .orderBy('id', 'asc');
 
   const categories = buildTree(all_categories, null);
 
