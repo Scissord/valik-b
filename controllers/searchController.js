@@ -20,15 +20,12 @@ export const search = async (req, res) => {
       }
     });
 
-    const hits = result.hits.hits.reduce(
-      (acc, hit) => {
-        const index = hit._index;
-        if (!acc[index]) acc[index] = [];
-        acc[index].push(hit._source);
-        return acc;
-      },
-      {}
-    );
+    const hits = result.hits.hits.reduce((acc, hit) => {
+      const index = hit._index;
+      if (!acc[index]) acc[index] = [];
+      acc[index].push(hit._source);
+      return acc;
+    }, {});
 
     res.status(200).json(hits);
   } catch (err) {
