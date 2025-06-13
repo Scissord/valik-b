@@ -9,3 +9,22 @@ export const get = async (req, res) => {
     res.status(500).json({ error: 'Ошибка при получении списка категорий!' });
   }
 };
+
+export const find = async (req, res) => {
+  const { limit, page } = req.query;
+  const category_id = req.params.category_id;
+
+  const { category, products, children_categories, total, totalPages } = await Category.find(
+    limit,
+    page,
+    category_id
+  );
+
+  res.status(200).send({
+    category,
+    products,
+    children_categories,
+    total,
+    totalPages
+  });
+};

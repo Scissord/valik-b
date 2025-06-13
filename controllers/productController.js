@@ -18,22 +18,6 @@ export const getForMainPage = async (req, res) => {
   });
 };
 
-export const getForCategory = async (req, res) => {
-  const { limit, page } = req.query;
-  const category_id = req.params.category_id;
-
-  const { category, products, children_categories, total, totalPages } =
-    await Product.getForCategory(limit, page, category_id);
-
-  res.status(200).send({
-    category,
-    products,
-    children_categories,
-    total,
-    totalPages
-  });
-};
-
 export const find = async (req, res) => {
   const id = req.params.product_id;
 

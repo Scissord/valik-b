@@ -20,34 +20,6 @@ export const getForMainPage = async (limit = 9, page = 1) => {
   };
 };
 
-export const getForCategory = async (limit = 9, page = 1, category_id) => {
-  const category = await db('category as c').where('c.id', category_id).first();
-
-  const children_categories = await db('category as c')
-    .where('c.parent_id', category_id)
-    .orderBy('id', 'asc');
-
-  const result = await db('product as p')
-    .orderBy('id', 'asc')
-    .where('p.category_id', category_id)
-    .whereNull('p.deleted_at')
-    .paginate({
-      perPage: limit,
-      currentPage: page,
-      isLengthAware: true
-    });
-
-  const { total, lastPage } = result.pagination;
-
-  return {
-    category,
-    children_categories,
-    products: result.data,
-    total,
-    totalPages: lastPage
-  };
-};
-
 export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
   const result = await db('product as p')
     .select('p.*')
@@ -70,8 +42,7 @@ export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
 };
 
 export const getForSearch = async () => {
-  return await db('product as p')
-    .select('p.id', 'p.title')
+  return await db('product as p').select('p.id', 'p.title');
 };
 
 export const get = async () => {
