@@ -14,7 +14,7 @@ export const get = async (req, res) => {
     return;
   }
 
-  for (const order of order) {
+  for (const order of orders) {
     order.created_at = formatDate(+order.created_at);
     order.updated_at = formatDate(+order.updated_at);
 
@@ -22,10 +22,7 @@ export const get = async (req, res) => {
 
     for (const item of items) {
       const product = await Product.find(item.product_id);
-      const unit = await Unit.find(product.unit_id);
       item.product = product;
-      item.unit = unit;
-      item.name = product.title;
       item.created_at = formatDate(+item.created_at);
       item.updated_at = formatDate(+item.updated_at);
     }
@@ -68,7 +65,7 @@ export const create = async (req, res) => {
 
 export const pooling = async (req, res) => {
   const user = req.user;
-  const order_id = req.body;
+  const order_id = req.body.order_id;
 
   const order = await Order.find(order_id);
 

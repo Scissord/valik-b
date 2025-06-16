@@ -1,10 +1,10 @@
-import { Client } from '@elastic/elasticsearch'
+import { Client } from '@elastic/elasticsearch';
 
 const es = new Client({
-  node: 'http://localhost:9200',
-})
+  node: 'http://localhost:9200'
+});
 
-// const exists = await es.indices.exists({ index: 'products_search' });
+// const exists = await es.indices.exists({ index: 'products' });
 // console.log(exists);
 
 export default es;
