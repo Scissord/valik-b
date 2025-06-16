@@ -1,7 +1,4 @@
 import * as Product from '#models/product.js';
-import * as Brand from '#models/brand.js';
-import * as Category from '#models/category.js';
-import * as Unit from '#models/unit.js';
 
 export const getForMainPage = async (req, res) => {
   const { limit, page } = req.query;

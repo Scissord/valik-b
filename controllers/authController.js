@@ -53,7 +53,7 @@ export const userLogin = async (req, res) => {
       refresh_token: refreshToken,
       expires_at
     });
-  };
+  }
 
   // 5. send cookie
   res.cookie('refreshToken', refreshToken, {
@@ -147,9 +147,7 @@ export const userRefresh = async (req, res) => {
       });
 
     // 4. if user exist and we get decodedRefresh, we generate JWT TOKEN
-    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = generateTokens(
-      user.id
-    );
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = generateTokens(user.id);
 
     const expires_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
     // 5. save refreshToken in DB
