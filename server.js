@@ -1,7 +1,6 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import fileUpload from 'express-fileupload';
 import helmet from 'helmet';
 import compression from 'compression';
 import routes from '#routes/index.js';
@@ -13,7 +12,6 @@ app.use(compression());
 app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
-app.use(fileUpload());
 app.use(
   cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

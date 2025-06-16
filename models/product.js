@@ -5,11 +5,27 @@ const db = knex();
 const productRepository = repository('product');
 
 export const getForMainPage = async (limit = 9, page = 1) => {
-  const result = await db('product as p').whereNull('p.deleted_at').orderBy('id', 'asc').paginate({
-    perPage: limit,
-    currentPage: page,
-    isLengthAware: true
-  });
+  const result = await db('product as p')
+    .select(
+      'p.*',
+      db.raw(`
+        COALESCE(
+          (
+            SELECT json_agg(f.link)
+            FROM product_image pi
+            JOIN file f ON f.id = pi.file_id
+            WHERE pi.product_id = p.id
+          ), '[]'
+        ) as images
+      `)
+    )
+    .whereNull('p.deleted_at')
+    .orderBy('p.id', 'asc')
+    .paginate({
+      perPage: limit,
+      currentPage: page,
+      isLengthAware: true
+    });
 
   const { total, lastPage } = result.pagination;
 
@@ -22,7 +38,19 @@ export const getForMainPage = async (limit = 9, page = 1) => {
 
 export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
   const result = await db('product as p')
-    .select('p.*')
+    .select(
+      'p.*',
+      db.raw(`
+        COALESCE(
+          (
+            SELECT json_agg(f.link)
+            FROM product_image pi
+            JOIN file f ON f.id = pi.file_id
+            WHERE pi.product_id = p.id
+          ), '[]'
+        ) as images
+      `)
+    )
     .whereNull('p.deleted_at')
     .where('p.supplier_id', supplier_id)
     .orderBy('p.id', 'asc')
@@ -70,7 +98,28 @@ export const hardDelete = async id => {
 };
 
 export const find = async id => {
-  return await productRepository.find(id);
+  return await db('product as p')
+    .select(
+      'p.*',
+      db.raw(`
+        COALESCE(
+          (
+            SELECT json_agg(f.link)
+            FROM product_image pi
+            JOIN file f ON f.id = pi.file_id
+            WHERE pi.product_id = p.id
+          ), '[]'
+        ) as images
+      `),
+      'b.title as brand',
+      'c.title as category',
+      'u.title as unit'
+    )
+    .leftJoin('brand as b', 'b.id', 'p.brand_id')
+    .leftJoin('category as c', 'c.id', 'p.category_id')
+    .leftJoin('unit as u', 'u.id', 'p.unit_id')
+    .where('p.id', id)
+    .first();
 };
 
 export const findWhere = async function (query) {

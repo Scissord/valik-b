@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import * as Supplier from '#models/supplier.js';
 import * as SupplierToken from '#models/supplier_token.js';
 import * as Product from '#models/product.js';
+import * as ProductImage from '#models/product_image.js';
 import generateTokens from '#utils/tokens/generateSupplierTokens.js';
 
 export const supplierLogin = async (req, res) => {
@@ -188,6 +189,7 @@ export const getProducts = async (req, res) => {
     const supplier_id = req.supplier.id;
 
     const data = await Product.getForSupplier(limit, page, supplier_id);
+
     res.status(200).send(data);
   } catch (err) {
     console.log('Error in get products for suppliers controller', err.message);
@@ -203,6 +205,15 @@ export const createProduct = async (req, res) => {
       ...data,
       supplier_id
     });
+
+    for (const file of req.savedFiles) {
+      if (file.mimetype?.startsWith('image/')) {
+        await ProductImage.create({
+          product_id: product.id,
+          file_id: file.id
+        });
+      }
+    }
 
     return res.status(200).send(product);
   } catch (err) {

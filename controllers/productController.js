@@ -20,15 +20,7 @@ export const getForMainPage = async (req, res) => {
 
 export const find = async (req, res) => {
   const id = req.params.product_id;
-
   const product = await Product.find(id);
-  const brands = await Brand.get();
-  const categories = await Category.getAll();
-  const units = await Unit.get();
-
-  product.brand = brands.find(brand => brand.id == product.brand_id)?.title;
-  product.unit = units.find(unit => unit.id == product.unit_id)?.title;
-  product.category = categories.find(category => category.id == product.category_id)?.title;
 
   res.status(200).send(product);
 };

@@ -1,8 +1,14 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import * as File from '#models/file.js';
 
-// Функция для создания конфигурации хранилища для multer
+const port = process.env.PORT;
+const url =
+  process.env.NODE_ENV === 'development'
+    ? `http://localhost:${port}/uploads`
+    : `${process.env.URL}${port}/uploads`;
+
 export default function getMulterStorage() {
   return multer.diskStorage({
     destination: (req, file, cb) => {
@@ -14,11 +20,32 @@ export default function getMulterStorage() {
 
       cb(null, uploadPath);
     },
-    filename: (req, file, cb) => {
-      const currentTime = new Date().toISOString().replace(/[-:.]/g, '');
-      const originalName = path.basename(file.originalname, path.extname(file.originalname));
-      const uniqueSuffix = `${originalName}-${currentTime}${path.extname(file.originalname)}`;
-      cb(null, uniqueSuffix);
+
+    filename: async (req, file, cb) => {
+      try {
+        const extension = path.extname(file.originalname);
+        const name = `${Date.now()}${extension}`;
+
+        const createdFile = await File.create({
+          link: `${url}/${name}`,
+          name: name,
+          originalname: file.originalname,
+          mimetype: file.mimetype
+        });
+
+        if (!req.savedFiles) {
+          req.savedFiles = [];
+        }
+
+        req.savedFiles.push({
+          id: createdFile.id,
+          mimetype: createdFile.mimetype
+        });
+
+        cb(null, name);
+      } catch (err) {
+        cb(err);
+      }
     }
   });
 }

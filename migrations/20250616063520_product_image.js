@@ -3,10 +3,10 @@
  * @returns { Promise<void> }
  */
 export const up = function (knex) {
-  return knex.schema.createTable('file', table => {
+  return knex.schema.createTable('product_image', table => {
     table.bigIncrements('id').primary();
-    table.string('url', 255).notNullable();
-    table.string('name', 255).notNullable();
+    table.bigInteger('product_id').notNullable();
+    table.bigInteger('file_id').notNullable();
 
     table
       .bigInteger('created_at')
@@ -23,5 +23,5 @@ export const up = function (knex) {
  * @returns { Promise<void> }
  */
 export const down = function (knex) {
-  return knex.schema.dropTable('file');
+  return knex.schema.dropTable('product_image');
 };
