@@ -3,6 +3,7 @@ import * as OrderItem from '#models/order_item.js';
 import * as Product from '#models/product.js';
 import * as Unit from '#models/unit.js';
 import formatDate from '#utils/formatDate.js';
+import { sendOrderNotification } from '#utils/telegramNotifier.js';
 
 export const get = async (req, res) => {
   const user = req.user;
@@ -42,6 +43,9 @@ export const create = async (req, res) => {
     user_id: user.id
   });
 
+  // Массив для хранения информации о товарах для уведомления
+  const orderItems = [];
+
   for (const item of cart) {
     const product = await Product.find(item.id);
     const item_total = +item.quantity * +product.price;
@@ -53,12 +57,29 @@ export const create = async (req, res) => {
       quantity: item.quantity
     });
 
+    // Добавляем информацию о товаре для уведомления
+    orderItems.push({
+      name: product.title || product.name,
+      quantity: item.quantity,
+      total: item_total
+    });
+
     total += +item_total;
   }
 
   await Order.update(order.id, { total });
 
-  // here use should add Telegram API
+  // Отправляем уведомление в Telegram
+  try {
+    const updatedOrder = await Order.find(order.id);
+    // Получаем информацию о пользователе для уведомления
+    updatedOrder.name = user.name || user.login || 'Пользователь';
+    updatedOrder.phone = user.phone || 'Не указан';
+    await sendOrderNotification(updatedOrder, orderItems);
+  } catch (error) {
+    console.error('Ошибка отправки уведомления:', error.message);
+    // Продолжаем выполнение, даже если отправка уведомления не удалась
+  }
 
   res.status(200).send(order);
 };
