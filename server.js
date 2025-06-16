@@ -8,19 +8,21 @@ import routes from '#routes/index.js';
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(compression());
-app.use(helmet());
+// app.use(compression());
+// app.use(
+//   helmet({
+//     crossOriginResourcePolicy: false,
+//     crossOriginEmbedderPolicy: false
+//   })
+// );
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    methods: ['POST', 'GET', 'PATCH', 'PUT', 'DELETE'],
-    // origin: [
-    //   'https://kazakhcrusader.store',
-    //   'http://localhost:5173'
-    // ],
-    origin: '*',
+    origin: [
+      // 'http://localhost:3000'
+    ],
+    origin: 'http://localhost:3000',
     credentials: true
   })
 );

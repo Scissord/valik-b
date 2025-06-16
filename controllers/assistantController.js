@@ -26,4 +26,4 @@ export const askAssistant = async (req, res) => {
       message: error.message || 'Внутренняя ошибка сервера'
     });
   }
-}; 
+};

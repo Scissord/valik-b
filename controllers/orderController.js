@@ -1,7 +1,6 @@
 import * as Order from '#models/order.js';
 import * as OrderItem from '#models/order_item.js';
 import * as Product from '#models/product.js';
-import * as Unit from '#models/unit.js';
 import formatDate from '#utils/formatDate.js';
 
 export const get = async (req, res) => {
