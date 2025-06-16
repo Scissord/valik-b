@@ -6,6 +6,7 @@ import { findValidation } from '#validations/category/find.js';
 const router = express.Router();
 
 router.get('', controller.get);
+router.get('/tree', controller.getTree);
 router.get('/:category_id', validate(findValidation), controller.find);
 
 export default router;

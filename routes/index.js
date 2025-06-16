@@ -1,5 +1,4 @@
-import { Router } from 'express';
-// import express from 'express';
+import express from 'express';
 import authRoutes from './authRoute.js';
 import productRoutes from './productRoute.js';
 import orderRoutes from './orderRoute.js';
@@ -10,8 +9,10 @@ import assistantRoutes from './assistantRoute.js';
 import supplierRoutes from './supplierRoute.js';
 import chatRoutes from './chatRoute.js';
 import searchRoutes from './searchRoute.js';
+import brandRoutes from './brandRoute.js';
+import unitRoutes from './unitRoute.js';
 
-const router = Router();
+const router = express.Router();
 
 router.use('/auth', authRoutes);
 router.use('/products', productRoutes);
@@ -23,6 +24,8 @@ router.use('/api/assistant', assistantRoutes);
 router.use('/suppliers', supplierRoutes);
 router.use('/api/chats', chatRoutes);
 router.use('/search', searchRoutes);
-// router.use('/uploads', express.static('uploads'));
+router.use('/brands', brandRoutes);
+router.use('/units', unitRoutes);
+router.use('/uploads', express.static('uploads'));
 
 export default router;

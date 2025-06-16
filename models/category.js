@@ -6,7 +6,7 @@ import { getAllCategoryIds } from '#utils/getAllCategoryIds.js';
 const db = knex();
 const categoryRepository = repository('category');
 
-export const get = async () => {
+export const getTree = async () => {
   const all_categories = await db('category as c').select('*').orderBy('id', 'asc');
 
   const categories = buildTree(all_categories, null);
