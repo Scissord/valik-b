@@ -2,7 +2,6 @@ import { validationResult } from 'express-validator';
 
 const validate = validations => {
   return async (req, res, next) => {
-    // Выполняем все проверки
     await Promise.all(validations.map(validation => validation.run(req)));
 
     const errors = validationResult(req);

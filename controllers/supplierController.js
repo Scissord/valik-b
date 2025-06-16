@@ -54,7 +54,7 @@ export const supplierLogin = async (req, res) => {
       refresh_token: refreshToken,
       expires_at
     });
-  };
+  }
 
   // 5. send cookie
   res.cookie('refreshToken', refreshToken, {
@@ -215,9 +215,20 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const data = req.body;
-    const product = await Product.update(id, data);
+    const supplier_id = req.supplier.id;
 
-    res.status(200).send(product);
+    // check if this product related to supplier
+    const product = await Product.find(id);
+    if (+product.supplier_id !== +supplier_id) {
+      res.status(400).send({
+        message: 'Данный продукт не относится к поставщику!'
+      });
+      return;
+    }
+
+    const updated_product = await Product.update(id, data);
+
+    res.status(200).send(updated_product);
   } catch (err) {
     console.log('Error in update product for supplier controller', err.message);
     res.status(500).send({ error: 'Internal Server Error' });
@@ -227,9 +238,20 @@ export const updateProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.softDelete(id);
+    const supplier_id = req.supplier.id;
 
-    res.status(200).send(product);
+    // check if this product related to supplier
+    const product = await Product.find(id);
+    if (+product.supplier_id !== +supplier_id) {
+      res.status(400).send({
+        message: 'Данный продукт не относится к поставщику!'
+      });
+      return;
+    }
+
+    const updated_product = await Product.softDelete(id);
+
+    res.status(200).send(updated_product);
   } catch (err) {
     console.log('Error in delete product for supplier controller', err.message);
     res.status(500).send({ error: 'Internal Server Error' });
