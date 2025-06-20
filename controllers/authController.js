@@ -59,8 +59,10 @@ export const userLogin = async (req, res) => {
   res.cookie('refreshToken', refreshToken, {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
     httpOnly: true, // Защищает от XSS атак
-    sameSite: 'strict', // Защита от CSRF атак
-    secure: process.env.NODE_ENV === 'production' // Только в производственной среде
+    // sameSite: 'strict', // Защита от CSRF атак
+    sameSite: 'lax', // Защита от CSRF атак
+    // secure: process.env.NODE_ENV === 'production' // Только в производственной среде
+    secure: false
   });
 
   // 6. make log about ip if ip not match
