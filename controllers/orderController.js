@@ -35,11 +35,12 @@ export const get = async (req, res) => {
 
 export const create = async (req, res) => {
   const user = req.user;
-  const { cart } = req.body;
+  const { cart, supplier_id } = req.body;
 
   let total = 0;
   const order = await Order.create({
-    user_id: user.id
+    user_id: user.id,
+    supplier_id: supplier_id || null // Добавляем поставщика, если указан
   });
 
   // Массив для хранения информации о товарах для уведомления
@@ -71,9 +72,6 @@ export const create = async (req, res) => {
   // Отправляем уведомление в Telegram
   try {
     const updatedOrder = await Order.find(order.id);
-    // Получаем информацию о пользователе для уведомления
-    updatedOrder.name = user.name || user.login || 'Пользователь';
-    updatedOrder.phone = user.phone || 'Не указан';
     await sendOrderNotification(updatedOrder, orderItems);
   } catch (error) {
     console.error('Ошибка отправки уведомления:', error.message);

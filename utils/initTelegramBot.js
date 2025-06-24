@@ -1,4 +1,5 @@
 import { bot } from './telegramNotifier.js';
+import * as telegramAuth from './telegramAuth.js';
 
 /**
  * Инициализирует Telegram бота при запуске сервера
@@ -16,10 +17,15 @@ export const initTelegramBot = () => {
     console.error('Ошибка в работе Telegram бота:', error.message);
   });
   
-  // Логирование успешного запуска
+  // Логирование ошибок webhook
   bot.on('webhook_error', (error) => {
     console.error('Ошибка webhook Telegram бота:', error.message);
   });
+
+  // Настройка периодической очистки сессий
+  setInterval(() => {
+    telegramAuth.cleanupSessions();
+  }, 1000 * 60 * 60); // Каждый час
 };
 
 export default initTelegramBot; 
