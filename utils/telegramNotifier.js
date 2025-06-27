@@ -53,18 +53,16 @@ function setupBotCommands() {
       if (session) {
         // Если автоматическая авторизация успешна
         const role = session.role;
+        const userName = session.user.name || session.user.login || '';
         
-        bot.sendMessage(userId, `Добро пожаловать! Вы автоматически авторизованы как ${role === 'client' ? 'клиент' : 'поставщик'}.`);
+        bot.sendMessage(userId, `Добро пожаловать, ${userName}! Вы автоматически авторизованы как ${role === 'client' ? 'клиент' : 'менеджер'}.`);
         
         switch (role) {
           case 'client':
             sendClientMainMenu(userId, 'Меню клиента:');
             break;
-          case 'supplier':
-            sendSupplierMainMenu(userId, 'Меню поставщика:');
-            break;
           case 'admin':
-            sendAdminMainMenu(userId, 'Панель администратора:');
+            sendAdminMainMenu(userId, 'Панель менеджера:');
             break;
           default:
             sendAuthMenu(userId, 'Выберите действие:');
@@ -82,17 +80,14 @@ function setupBotCommands() {
         case 'client':
           sendClientMainMenu(userId, 'Добро пожаловать в меню клиента!');
           break;
-        case 'supplier':
-          sendSupplierMainMenu(userId, 'Добро пожаловать в меню поставщика!');
-          break;
         case 'admin':
-          sendAdminMainMenu(userId, 'Добро пожаловать в панель администратора!');
+          sendAdminMainMenu(userId, 'Добро пожаловать в панель менеджера!');
           break;
         default:
           sendAuthMenu(userId, 'Добро пожаловать! Выберите действие:');
       }
     } else {
-      sendAuthMenu(userId, 'Добро пожаловать! Для начала работы необходимо авторизоваться:');
+      sendAuthMenu(userId, 'Добро пожаловать в систему отслеживания заказов! Для начала работы необходимо авторизоваться:');
     }
   });
 
@@ -117,11 +112,8 @@ function setupBotCommands() {
         case 'client':
           sendClientMainMenu(userId, 'Меню клиента:');
           break;
-        case 'supplier':
-          sendSupplierMainMenu(userId, 'Меню поставщика:');
-          break;
         case 'admin':
-          sendAdminMainMenu(userId, 'Панель администратора:');
+          sendAdminMainMenu(userId, 'Панель менеджера:');
           break;
         default:
           sendAuthMenu(userId, 'Выберите действие:');
@@ -139,7 +131,7 @@ function setupBotCommands() {
     sendAuthMenu(userId, 'Для продолжения работы необходимо авторизоваться:');
   });
 
-  // Обработка ввода логина
+  // Обработка ввода пользователя для авторизации
   bot.on('message', async (msg) => {
     if (!msg.text || msg.text.startsWith('/')) return;
     
@@ -149,67 +141,74 @@ function setupBotCommands() {
     // Если пользователь не в процессе авторизации, игнорируем сообщение
     if (!session || !session.authState) return;
     
-    // Обработка ввода логина и пароля
-    if (session.authState === 'awaiting_login') {
+    // Обработка авторизации администратора
+    if (session.authState === 'awaiting_admin_login') {
       // Сохраняем логин и запрашиваем пароль
       session.login = msg.text;
-      session.authState = 'awaiting_password';
+      session.authState = 'awaiting_admin_password';
       
-      bot.sendMessage(userId, 'Введите пароль:');
-    } else if (session.authState === 'awaiting_password') {
-      // Получаем пароль и пытаемся авторизоваться
+      console.log('Запрос пароля для логина:', session.login);
+      bot.sendMessage(userId, 'Введите пароль менеджера:');
+    } else if (session.authState === 'awaiting_admin_password') {
+      // Получаем пароль и пытаемся авторизоваться как менеджер
       const password = msg.text;
       const login = session.login;
       
-      let authData = null;
-      
-      // Пытаемся авторизоваться в зависимости от выбранной роли
-      if (session.authRole === 'client') {
-        authData = await telegramAuth.authClient(login, password);
-      } else if (session.authRole === 'supplier') {
-        authData = await telegramAuth.authSupplier(login, password);
-      }
+      console.log('Попытка авторизации с логином:', login, 'и паролем:', password);
+      const authData = await telegramAuth.authAdmin(login, password);
+      console.log('Результат авторизации:', authData ? 'успешно' : 'неудача');
       
       // Удаляем временные данные авторизации
       delete session.authState;
       delete session.login;
       
       if (authData) {
-        // Сохраняем telegram_id пользователя в базе данных
-        if (authData.role === 'client') {
-          try {
-            await User.update(authData.user.id, { 
-              telegram_id: String(userId),
-              telegram_data: JSON.stringify(msg.from)
-            });
-          } catch (error) {
-            console.error('Ошибка обновления telegram_id пользователя:', error);
-          }
-        } else if (authData.role === 'supplier') {
-          try {
-            await Supplier.update(authData.user.id, {
-              telegram_id: String(userId),
-              telegram_data: JSON.stringify(msg.from)
-            });
-          } catch (error) {
-            console.error('Ошибка обновления telegram_id поставщика:', error);
-          }
-        }
-        
-        // Создаем сессию пользователя
+        // Создаем сессию администратора
         telegramAuth.createSession(userId, authData);
         
-        bot.sendMessage(userId, 'Авторизация успешна!');
-        
-        // Показываем соответствующее меню
-        if (authData.role === 'client') {
-          sendClientMainMenu(userId, 'Добро пожаловать в меню клиента!');
-        } else if (authData.role === 'supplier') {
-          sendSupplierMainMenu(userId, 'Добро пожаловать в меню поставщика!');
+        // Сохраняем telegram_id в базе данных
+        try {
+          await User.update(authData.user.id, { 
+            telegram_id: String(userId)
+          });
+        } catch (error) {
+          console.error('Ошибка обновления telegram_id менеджера:', error);
         }
+        
+        bot.sendMessage(userId, 'Авторизация менеджера успешна!');
+        sendAdminMainMenu(userId, 'Добро пожаловать в панель менеджера!');
       } else {
-        bot.sendMessage(userId, 'Ошибка авторизации. Неверный логин или пароль.');
+        bot.sendMessage(userId, 'Ошибка авторизации. Неверный логин или пароль менеджера.');
         sendAuthMenu(userId, 'Попробуйте снова:');
+      }
+    } 
+    // Обработка авторизации клиента по телефону
+    else if (session.authState === 'awaiting_phone') {
+      const phone = msg.text;
+      
+      const authData = await telegramAuth.authClientByPhone(phone);
+      
+      // Удаляем временные данные авторизации
+      delete session.authState;
+      
+      if (authData) {
+        try {
+          // Сохраняем telegram_id пользователя в базе данных
+          await User.update(authData.user.id, { 
+            telegram_id: String(userId)
+          });
+        } catch (error) {
+          console.error('Ошибка обновления telegram_id пользователя:', error);
+        }
+        
+        // Создаем сессию клиента
+        telegramAuth.createSession(userId, authData);
+        
+        bot.sendMessage(userId, `Авторизация успешна! Вы вошли как ${authData.user.name || authData.user.login || 'Клиент'}`);
+        sendClientMainMenu(userId, 'Добро пожаловать в меню клиента!');
+      } else {
+        bot.sendMessage(userId, 'Пользователь с указанным номером телефона не найден.');
+        sendAuthMenu(userId, 'Попробуйте снова или обратитесь к менеджеру:');
       }
     }
   });
@@ -224,13 +223,19 @@ function setupBotCommands() {
     const [action, id, value] = data.split(':');
     
     try {
-            // Авторизация
+      // Авторизация
       if (action === 'auth') {
-        if (id === 'client' || id === 'supplier') {
-          // Инициируем процесс авторизации
-          telegramAuth.startAuthProcess(userId, id);
+        if (id === 'client') {
+          // Инициируем процесс авторизации клиента по телефону
+          telegramAuth.startClientPhoneAuthProcess(userId);
           
-          bot.sendMessage(userId, 'Введите логин:');
+          bot.sendMessage(userId, 'Введите номер телефона, который вы указывали при оформлении заказа:');
+          bot.answerCallbackQuery(callbackQuery.id);
+        } else if (id === 'admin') {
+          // Инициируем процесс авторизации администратора
+          telegramAuth.startAdminAuthProcess(userId);
+          
+          bot.sendMessage(userId, 'Введите логин менеджера:');
           bot.answerCallbackQuery(callbackQuery.id);
         }
         return;
@@ -242,8 +247,8 @@ function setupBotCommands() {
         bot.sendMessage(userId, 'Вы успешно вышли из аккаунта.');
         sendAuthMenu(userId, 'Для продолжения работы необходимо авторизоваться:');
         bot.answerCallbackQuery(callbackQuery.id);
-        return;
-      }
+            return;
+          }
           
       // Проверяем авторизацию для всех остальных действий
       if (!telegramAuth.isAuthenticated(userId)) {
@@ -263,8 +268,6 @@ function setupBotCommands() {
       // Маршрутизация действий по ролям
       if (userRole === 'client') {
         await handleClientActions(action, id, value, userId, callbackQuery);
-      } else if (userRole === 'supplier') {
-        await handleSupplierActions(action, id, value, userId, callbackQuery);
       } else if (userRole === 'admin') {
         await handleAdminActions(action, id, value, userId, callbackQuery);
       }
@@ -669,7 +672,7 @@ async function sendAuthMenu(chatId, message) {
   const keyboard = {
     inline_keyboard: [
       [{ text: '👤 Войти как клиент', callback_data: 'auth:client:' }],
-      [{ text: '🏪 Войти как поставщик', callback_data: 'auth:supplier:' }]
+      [{ text: '👨‍💼 Войти как менеджер', callback_data: 'auth:admin:' }]
     ]
   };
   
@@ -686,9 +689,9 @@ async function sendAuthMenu(chatId, message) {
 async function sendClientMainMenu(chatId, message) {
   const keyboard = {
     inline_keyboard: [
-      [{ text: '📋 Мои заказы', callback_data: 'client:orders:' }],
-      [{ text: '📱 Настройки профиля', callback_data: 'client:profile:' }],
-      [{ text: '❓ Помощь', callback_data: 'client:help:' }],
+      [{ text: '📋 Мои заказы', callback_data: 'menu:my_orders:' }],
+      [{ text: '👤 Мой профиль', callback_data: 'menu:profile:' }],
+      [{ text: '📲 Поддержка', callback_data: 'menu:support:' }],
       [{ text: '🚪 Выйти из аккаунта', callback_data: 'logout::' }]
     ]
   };
@@ -699,36 +702,16 @@ async function sendClientMainMenu(chatId, message) {
 }
 
 /**
- * Отправляет главное меню поставщика
- * @param {number} chatId - ID чата
- * @param {string} message - Сообщение над меню
- */
-async function sendSupplierMainMenu(chatId, message) {
-  const keyboard = {
-    inline_keyboard: [
-      [{ text: '📦 Активные заказы', callback_data: 'supplier:active_orders:' }],
-      [{ text: '📊 История заказов', callback_data: 'supplier:order_history:' }],
-      [{ text: '⚙️ Настройки', callback_data: 'supplier:settings:' }],
-      [{ text: '🚪 Выйти из аккаунта', callback_data: 'logout::' }]
-    ]
-  };
-  
-  await bot.sendMessage(chatId, message, {
-    reply_markup: keyboard
-  });
-}
-
-/**
- * Отправляет главное меню администратора
+ * Отправляет главное меню менеджера
  * @param {number} chatId - ID чата
  * @param {string} message - Сообщение над меню
  */
 async function sendAdminMainMenu(chatId, message) {
   const keyboard = {
     inline_keyboard: [
-      [{ text: '📋 Все заказы', callback_data: 'admin:orders:' }],
-      [{ text: '🔍 Фильтр заказов по статусу', callback_data: 'admin:filter:' }],
-      [{ text: '⚠️ Уведомления', callback_data: 'admin:notifications:' }],
+      [{ text: '📋 Все заказы', callback_data: 'menu:orders:' }],
+      [{ text: '🔍 Фильтр по статусу', callback_data: 'menu:filter:' }],
+      [{ text: '📊 Статистика', callback_data: 'menu:stats:' }],
       [{ text: '🚪 Выйти из аккаунта', callback_data: 'logout::' }]
     ]
   };
@@ -749,8 +732,27 @@ async function sendAdminMainMenu(chatId, message) {
 async function handleClientActions(action, id, value, userId, callbackQuery) {
   const session = telegramAuth.getSession(userId);
   
+  console.log('handleClientActions:', action, id, value);
+  
   switch (action) {
+    case 'menu':
+      if (id === 'my_orders') {
+        // Показать заказы клиента
+        await showClientOrders(userId, session.user.id);
+      } else if (id === 'profile') {
+        // Показать профиль клиента
+        await showClientProfile(userId, session.user);
+      } else if (id === 'support') {
+        // Показать помощь для клиента
+        await bot.sendMessage(userId, 'Здесь будет отображаться контактная информация службы поддержки.');
+      } else if (id === 'back') {
+        // Вернуться в главное меню клиента
+        await sendClientMainMenu(userId, 'Меню клиента:');
+      }
+      break;
+      
     case 'client':
+      // Для обратной совместимости
       if (id === 'orders') {
         // Показать заказы клиента
         await showClientOrders(userId, session.user.id);
@@ -809,162 +811,12 @@ async function handleClientActions(action, id, value, userId, callbackQuery) {
       
       bot.sendMessage(userId, `Выбрана опция доставки: ${value}. Ваш заказ скоро будет отправлен!`);
       
-      // Отправляем уведомление поставщику
-      const supplier = await Supplier.find(order.supplier_id);
-      if (supplier && supplier.telegram_id) {
-        bot.sendMessage(supplier.telegram_id, `🚚 Клиент выбрал опцию доставки для заказа #${order.id}: ${value}`);
-      }
-      
-      // Отправляем уведомление администратору
-      bot.sendMessage(adminChatId, `🚚 Клиент выбрал опцию доставки для заказа #${order.id}: ${value}`);
-      
       // Показываем обновленные детали заказа
       await showClientOrderDetails(userId, await Order.find(id));
       break;
   }
   
   bot.answerCallbackQuery(callbackQuery.id);
-}
-
-/**
- * Обрабатывает действия поставщика
- * @param {string} action - Тип действия
- * @param {string} id - Идентификатор элемента
- * @param {string} value - Дополнительное значение
- * @param {number} userId - ID пользователя
- * @param {Object} callbackQuery - Объект callback запроса
- */
-async function handleSupplierActions(action, id, value, userId, callbackQuery) {
-  const session = telegramAuth.getSession(userId);
-  
-  switch (action) {
-    case 'supplier':
-      if (id === 'active_orders') {
-        // Показать активные заказы поставщика
-        await showSupplierActiveOrders(userId, session.user.id);
-      } else if (id === 'order_history') {
-        // Показать историю заказов
-        await showSupplierOrderHistory(userId, session.user.id);
-      } else if (id === 'settings') {
-        // Показать настройки поставщика
-        await bot.sendMessage(userId, 'Здесь будут отображаться настройки поставщика.');
-      } else if (id === 'back') {
-        // Вернуться в главное меню поставщика
-        await sendSupplierMainMenu(userId, 'Меню поставщика:');
-      }
-      break;
-      
-    case 'order':
-      if (id === 'view') {
-        // Просмотр деталей заказа поставщиком
-        const order = await Order.find(value);
-        if (!order || order.supplier_id !== session.user.id) {
-          bot.answerCallbackQuery(callbackQuery.id, { text: 'Заказ не найден или не назначен вам' });
-          return;
-        }
-        
-        await showSupplierOrderDetails(userId, order);
-      } else if (id === 'status') {
-        // Изменение статуса заказа
-        const order = await Order.find(value);
-        if (!order || order.supplier_id !== session.user.id) {
-          bot.answerCallbackQuery(callbackQuery.id, { text: 'Заказ не найден или не назначен вам' });
-          return;
-        }
-        
-        await showOrderStatusOptions(userId, order);
-      }
-      break;
-      
-    case 'status':
-      // Обновление статуса заказа
-      const orderId = id;
-      const newStatus = parseInt(value);
-      
-      const order = await Order.find(orderId);
-      if (!order || order.supplier_id !== session.user.id) {
-        bot.answerCallbackQuery(callbackQuery.id, { text: 'Заказ не найден или не назначен вам' });
-        return;
-      }
-      
-      // Дополнительные данные при смене статуса
-      let additionalData = {};
-      
-      // Если заказ отмечен как "Готов к отправке", добавляем время готовности
-      if (newStatus === 2) {
-        additionalData.ready_time = Date.now();
-        
-        // Показываем опции времени ожидания
-        await showWaitingTimeOptions(userId, order);
-      }
-      
-      // Обновляем статус заказа
-      await Order.update(orderId, { 
-        status: newStatus,
-        ...additionalData
-      });
-      
-      // Отправляем уведомление клиенту
-      if (order.user_id) {
-        const user = await User.find(order.user_id);
-        if (user && user.telegram_id) {
-          bot.sendMessage(user.telegram_id, `Статус вашего заказа #${orderId} изменен на "${ORDER_STATUSES[newStatus]}"`);
-          
-          // Если заказ готов к отправке, предлагаем клиенту опции доставки
-          if (newStatus === 2) {
-            const buttons = {
-              inline_keyboard: [
-                [{ text: '🚚 Заказать доставку', callback_data: `order:request_delivery:${orderId}` }],
-                [{ text: '📋 Детали заказа', callback_data: `order:view:${orderId}` }]
-              ]
-            };
-            
-            bot.sendMessage(user.telegram_id, 'Ваш заказ готов к отправке! Вы можете заказать доставку:', {
-              reply_markup: buttons
-            });
-          }
-        }
-      }
-      
-      // Отправляем уведомление администратору
-      bot.sendMessage(adminChatId, `Поставщик изменил статус заказа #${orderId} на "${ORDER_STATUSES[newStatus]}"`);
-      
-      // Отвечаем на callback запрос
-      bot.answerCallbackQuery(callbackQuery.id, { text: `Статус заказа #${orderId} обновлен на "${ORDER_STATUSES[newStatus]}"` });
-      
-      // Показываем обновленные детали заказа
-      await showSupplierOrderDetails(userId, await Order.find(orderId));
-      break;
-      
-    case 'waiting':
-      // Обновление времени ожидания готовности
-      const waitingOrder = await Order.find(id);
-      if (!waitingOrder || waitingOrder.supplier_id !== session.user.id) {
-        bot.answerCallbackQuery(callbackQuery.id, { text: 'Заказ не найден или не назначен вам' });
-        return;
-      }
-      
-      // Обновляем информацию о времени ожидания
-      await Order.update(id, { 
-        delivery_options: `Время ожидания: ${value} минут`
-      });
-      
-      bot.sendMessage(userId, `Установлено время ожидания для заказа #${id}: ${value} минут`);
-      
-      // Отправляем уведомление клиенту
-      if (waitingOrder.user_id) {
-        const user = await User.find(waitingOrder.user_id);
-        if (user && user.telegram_id) {
-          bot.sendMessage(user.telegram_id, `Поставщик указал время ожидания для вашего заказа #${id}: ${value} минут`);
-        }
-      }
-      
-      // Отправляем уведомление администратору
-      bot.sendMessage(adminChatId, `Поставщик указал время ожидания для заказа #${id}: ${value} минут`);
-      
-      bot.answerCallbackQuery(callbackQuery.id);
-      break;
-  }
 }
 
 /**
@@ -976,14 +828,32 @@ async function handleSupplierActions(action, id, value, userId, callbackQuery) {
  * @param {Object} callbackQuery - Объект callback запроса
  */
 async function handleAdminActions(action, id, value, userId, callbackQuery) {
-  // Проверяем, что пользователь является администратором
-  if (userId != adminChatId) {
-    bot.answerCallbackQuery(callbackQuery.id, { text: 'У вас нет прав администратора' });
+  // Проверяем роль пользователя через сессию
+  const session = telegramAuth.getSession(userId);
+  if (!session || session.role !== 'admin') {
+    bot.answerCallbackQuery(callbackQuery.id, { text: 'У вас нет прав менеджера' });
     return;
   }
   
   switch (action) {
+    case 'menu':
+      if (id === 'orders') {
+        // Показать все заказы
+        await showAllOrders(userId);
+      } else if (id === 'filter') {
+        // Показать меню фильтрации
+        sendFilterMenu(userId);
+      } else if (id === 'stats') {
+        // Статистика заказов
+        await bot.sendMessage(userId, 'Здесь будет отображаться статистика заказов.');
+      } else if (id === 'back') {
+        // Вернуться в главное меню администратора
+        await sendAdminMainMenu(userId, 'Панель менеджера:');
+      }
+      break;
+      
     case 'admin':
+      // Для обратной совместимости
       if (id === 'orders') {
         // Показать все заказы
         await showAllOrders(userId);
@@ -995,7 +865,7 @@ async function handleAdminActions(action, id, value, userId, callbackQuery) {
         await bot.sendMessage(userId, 'Здесь будут отображаться настройки уведомлений.');
       } else if (id === 'back') {
         // Вернуться в главное меню администратора
-        await sendAdminMainMenu(userId, 'Панель администратора:');
+        await sendAdminMainMenu(userId, 'Панель менеджера:');
       }
       break;
       
@@ -1023,15 +893,22 @@ async function handleAdminActions(action, id, value, userId, callbackQuery) {
       if (updatedOrder.user_id) {
         const user = await User.find(updatedOrder.user_id);
         if (user && user.telegram_id) {
+          // Базовое уведомление о смене статуса
           bot.sendMessage(user.telegram_id, `Статус вашего заказа #${orderId} изменен на "${ORDER_STATUSES[newStatus]}"`);
-        }
-      }
-      
-      // Отправляем уведомление поставщику
-      if (updatedOrder.supplier_id) {
-        const supplier = await Supplier.find(updatedOrder.supplier_id);
-        if (supplier && supplier.telegram_id) {
-          bot.sendMessage(supplier.telegram_id, `Администратор изменил статус заказа #${orderId} на "${ORDER_STATUSES[newStatus]}"`);
+          
+          // Если заказ готов к отправке, предлагаем клиенту опции доставки
+          if (newStatus === 2) {
+            const buttons = {
+              inline_keyboard: [
+                [{ text: '🚚 Заказать доставку', callback_data: `order:request_delivery:${orderId}` }],
+                [{ text: '📋 Детали заказа', callback_data: `order:view:${orderId}` }]
+              ]
+            };
+            
+            bot.sendMessage(user.telegram_id, 'Ваш заказ готов к отправке! Вы можете заказать доставку:', {
+              reply_markup: buttons
+            });
+          }
         }
       }
       
@@ -1057,8 +934,8 @@ async function handleAdminActions(action, id, value, userId, callbackQuery) {
         reply_markup: {
           inline_keyboard: [
             [{ text: 'Изменить статус', callback_data: `status:${id}:${orderToView.status}` }],
-            [{ text: '« Назад к заказам', callback_data: 'admin:orders:' }],
-            [{ text: '« Главное меню', callback_data: 'admin:back:' }]
+            [{ text: '« Назад к заказам', callback_data: 'menu:orders:' }],
+            [{ text: '« Главное меню', callback_data: 'menu:back:' }]
           ]
         }
       });
@@ -1081,7 +958,7 @@ async function showClientOrders(chatId, userId) {
       await bot.sendMessage(chatId, 'У вас пока нет заказов', {
         reply_markup: {
           inline_keyboard: [
-            [{ text: '« Назад в меню', callback_data: 'client:back:' }]
+            [{ text: '« Назад в меню', callback_data: 'menu:back:' }]
           ]
         }
       });
@@ -1105,7 +982,7 @@ async function showClientOrders(chatId, userId) {
     
     // Добавляем кнопку возврата в меню
     const navigationButtons = [
-      [{ text: '« Назад в меню', callback_data: 'client:back:' }]
+      [{ text: '« Назад в меню', callback_data: 'menu:back:' }]
     ];
     
     // Объединяем все кнопки
@@ -1122,7 +999,7 @@ async function showClientOrders(chatId, userId) {
     await bot.sendMessage(chatId, 'Произошла ошибка при получении списка заказов', {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '« Назад в меню', callback_data: 'client:back:' }]
+          [{ text: '« Назад в меню', callback_data: 'menu:back:' }]
         ]
       }
     });
@@ -1144,7 +1021,7 @@ async function showClientProfile(chatId, user) {
   // Добавляем кнопку возврата в меню
   const keyboard = {
     inline_keyboard: [
-      [{ text: '« Назад в меню', callback_data: 'client:back:' }]
+      [{ text: '« Назад в меню', callback_data: 'menu:back:' }]
     ]
   };
   
@@ -1164,28 +1041,9 @@ async function showClientOrderDetails(chatId, order) {
     // Получаем информацию о товарах в заказе
     const items = await OrderItem.getByOrderId(order.id);
     
-    // Получаем данные о поставщике, если есть
-    let supplierInfo = '';
-    if (order.supplier_id) {
-      try {
-        const supplier = await Supplier.find(order.supplier_id);
-        if (supplier) {
-          supplierInfo = `🏪 *Поставщик*: ${supplier.name || supplier.login || 'Не указан'}\n`;
-          if (supplier.phone) {
-            supplierInfo += `📱 *Телефон поставщика*: ${supplier.phone}\n`;
-          }
-        }
-      } catch (error) {
-        console.error('Ошибка при получении данных поставщика:', error);
-      }
-    }
-    
     let message = `📦 *ДЕТАЛИ ЗАКАЗА #${order.id}*\n\n`;
     message += `💰 *Сумма*: ${order.total || 0} ₸\n`;
     message += `🔄 *Статус*: ${ORDER_STATUSES[order.status] || 'Неизвестный статус'}\n`;
-    if (supplierInfo) {
-      message += `\n${supplierInfo}\n`;
-    }
     
     // Информация о товарах
     message += `\n📋 *Товары:*\n`;
@@ -1219,8 +1077,8 @@ async function showClientOrderDetails(chatId, order) {
     }
     
     // Добавляем кнопки навигации
-    buttons.push([{ text: '« Назад к заказам', callback_data: 'client:orders:' }]);
-    buttons.push([{ text: '« Главное меню', callback_data: 'client:back:' }]);
+    buttons.push([{ text: '« Назад к заказам', callback_data: 'menu:my_orders:' }]);
+    buttons.push([{ text: '« Главное меню', callback_data: 'menu:back:' }]);
     
     await bot.sendMessage(chatId, message, {
       parse_mode: 'Markdown',
@@ -1233,8 +1091,8 @@ async function showClientOrderDetails(chatId, order) {
     await bot.sendMessage(chatId, 'Произошла ошибка при получении деталей заказа', {
       reply_markup: {
         inline_keyboard: [
-          [{ text: '« Назад к заказам', callback_data: 'client:orders:' }],
-          [{ text: '« Главное меню', callback_data: 'client:back:' }]
+          [{ text: '« Назад к заказам', callback_data: 'menu:my_orders:' }],
+          [{ text: '« Главное меню', callback_data: 'menu:back:' }]
         ]
       }
     });
@@ -1258,303 +1116,6 @@ async function showDeliveryOptions(chatId, order) {
   };
   
   await bot.sendMessage(chatId, 'Выберите способ доставки:', {
-    reply_markup: keyboard
-  });
-}
-
-/**
- * Показывает активные заказы для поставщика
- * @param {number} chatId - ID чата
- * @param {number} supplierId - ID поставщика
- */
-async function showSupplierActiveOrders(chatId, supplierId) {
-  try {
-    // Получаем активные заказы поставщика (статусы 0-3)
-    const orders = await Order.getWhere({
-      supplier_id: supplierId,
-      deleted_at: null,
-      status: [0, 1, 2, 3] // Активные статусы: Создан, В сборке, Готов к отправке, В пути
-    });
-    
-    if (!orders || orders.length === 0) {
-      await bot.sendMessage(chatId, 'У вас нет активных заказов', {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '« Назад в меню', callback_data: 'supplier:back:' }]
-          ]
-        }
-      });
-      return;
-    }
-    
-    let message = '*Активные заказы:*\n\n';
-    
-    for (const order of orders) {
-      const status = ORDER_STATUSES[order.status] || 'Неизвестный статус';
-      message += `📦 *Заказ #${order.id}*\n`;
-      message += `💰 Сумма: ${order.total || 0} ₸\n`;
-      message += `🔄 Статус: ${status}\n`;
-      message += `📅 Дата: ${new Date(+order.created_at).toLocaleString('ru-RU')}\n\n`;
-    }
-    
-    // Создаем кнопки для каждого заказа
-    const orderButtons = orders.map(order => [
-      { text: `📋 Детали заказа #${order.id}`, callback_data: `order:view:${order.id}` }
-    ]);
-    
-    // Добавляем кнопку возврата в меню
-    const navigationButtons = [
-      [{ text: '« Назад в меню', callback_data: 'supplier:back:' }]
-    ];
-    
-    // Объединяем все кнопки
-    const keyboard = {
-      inline_keyboard: [...orderButtons, ...navigationButtons]
-    };
-    
-    await bot.sendMessage(chatId, message, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    });
-  } catch (error) {
-    console.error('Ошибка при получении списка активных заказов:', error);
-    await bot.sendMessage(chatId, 'Произошла ошибка при получении списка заказов', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '« Назад в меню', callback_data: 'supplier:back:' }]
-        ]
-      }
-    });
-  }
-}
-
-/**
- * Показывает историю заказов для поставщика
- * @param {number} chatId - ID чата
- * @param {number} supplierId - ID поставщика
- */
-async function showSupplierOrderHistory(chatId, supplierId) {
-  try {
-    // Получаем завершенные заказы поставщика (статусы 4, 5)
-    const orders = await Order.getWhere({
-      supplier_id: supplierId,
-      deleted_at: null,
-      status: [4, 5] // Завершенные статусы: Доставлен, Отменен
-    });
-    
-    if (!orders || orders.length === 0) {
-      await bot.sendMessage(chatId, 'У вас нет завершенных заказов', {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '« Назад в меню', callback_data: 'supplier:back:' }]
-          ]
-        }
-      });
-      return;
-    }
-    
-    let message = '*История заказов:*\n\n';
-    
-    for (const order of orders) {
-      const status = ORDER_STATUSES[order.status] || 'Неизвестный статус';
-      message += `📦 *Заказ #${order.id}*\n`;
-      message += `💰 Сумма: ${order.total || 0} ₸\n`;
-      message += `🔄 Статус: ${status}\n`;
-      message += `📅 Дата: ${new Date(+order.created_at).toLocaleString('ru-RU')}\n\n`;
-    }
-    
-    // Создаем кнопки для каждого заказа
-    const orderButtons = orders.map(order => [
-      { text: `📋 Детали заказа #${order.id}`, callback_data: `order:view:${order.id}` }
-    ]);
-    
-    // Добавляем кнопку возврата в меню
-    const navigationButtons = [
-      [{ text: '« Назад в меню', callback_data: 'supplier:back:' }]
-    ];
-    
-    // Объединяем все кнопки
-    const keyboard = {
-      inline_keyboard: [...orderButtons, ...navigationButtons]
-    };
-    
-    await bot.sendMessage(chatId, message, {
-      parse_mode: 'Markdown',
-      reply_markup: keyboard
-    });
-  } catch (error) {
-    console.error('Ошибка при получении истории заказов:', error);
-    await bot.sendMessage(chatId, 'Произошла ошибка при получении истории заказов', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '« Назад в меню', callback_data: 'supplier:back:' }]
-        ]
-      }
-    });
-  }
-}
-
-/**
- * Показывает детали заказа для поставщика
- * @param {number} chatId - ID чата
- * @param {Object} order - Объект заказа
- */
-async function showSupplierOrderDetails(chatId, order) {
-  try {
-    // Получаем информацию о товарах в заказе
-    const items = await OrderItem.getByOrderId(order.id);
-    
-    // Получаем информацию о клиенте
-    let userName = 'Не указан';
-    let userPhone = 'Не указан';
-    
-    if (order.user_id) {
-      try {
-        const user = await User.find(order.user_id);
-        if (user) {
-          userName = user.name || user.login || 'Не указан';
-          userPhone = user.phone || 'Не указан';
-        }
-      } catch (error) {
-        console.error('Ошибка при получении данных пользователя:', error);
-      }
-    }
-    
-    let message = `📦 *ДЕТАЛИ ЗАКАЗА #${order.id}*\n\n`;
-    
-    // Информация о клиенте
-    message += `👤 *Клиент*: ${userName}\n`;
-    message += `📱 *Телефон*: ${userPhone}\n`;
-    message += `💰 *Сумма*: ${order.total || 0} ₸\n`;
-    message += `🔄 *Статус*: ${ORDER_STATUSES[order.status] || 'Неизвестный статус'}\n\n`;
-    
-    // Информация о товарах
-    message += `📋 *Товары:*\n`;
-    
-    if (Array.isArray(items) && items.length > 0) {
-      for (const item of items) {
-        try {
-          const product = await Product.find(item.product_id);
-          message += `• ${product?.title || product?.name || 'Товар'} x ${item.quantity} = ${item.total} ₸\n`;
-        } catch (error) {
-          message += `• Товар ID: ${item.product_id} x ${item.quantity} = ${item.total} ₸\n`;
-        }
-      }
-    } else {
-      message += `• Информация о товарах отсутствует\n`;
-    }
-    
-    message += `\n📅 *Дата создания*: ${new Date(+order.created_at).toLocaleString('ru-RU')}\n`;
-    
-    // Добавляем информацию о времени готовности, если есть
-    if (order.ready_time) {
-      message += `⏱ *Время готовности*: ${new Date(+order.ready_time).toLocaleString('ru-RU')}\n`;
-    }
-    
-    // Добавляем информацию о доставке, если есть
-    if (order.delivery_options) {
-      message += `🚚 *Доставка*: ${order.delivery_options}\n`;
-    }
-    
-    // Формируем кнопки в зависимости от статуса заказа
-    const buttons = [];
-    
-    // Кнопка изменения статуса
-    buttons.push([{ text: '🔄 Изменить статус', callback_data: `order:status:${order.id}` }]);
-    
-    // Добавляем кнопки навигации
-    buttons.push([{ text: '« Назад к активным заказам', callback_data: 'supplier:active_orders:' }]);
-    buttons.push([{ text: '« Главное меню', callback_data: 'supplier:back:' }]);
-    
-    await bot.sendMessage(chatId, message, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: buttons
-      }
-    });
-  } catch (error) {
-    console.error('Ошибка при получении деталей заказа:', error);
-    await bot.sendMessage(chatId, 'Произошла ошибка при получении деталей заказа', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '« Назад к заказам', callback_data: 'supplier:active_orders:' }],
-          [{ text: '« Главное меню', callback_data: 'supplier:back:' }]
-        ]
-      }
-    });
-  }
-}
-
-/**
- * Показывает опции для изменения статуса заказа
- * @param {number} chatId - ID чата
- * @param {Object} order - Объект заказа
- */
-async function showOrderStatusOptions(chatId, order) {
-  const currentStatus = order.status;
-  
-  // Создаем кнопки для изменения статуса
-  // Показываем только те статусы, которые следуют за текущим
-  const buttons = [];
-  
-  if (currentStatus < 1) {
-    buttons.push([{ text: '✅ Принят в работу', callback_data: `status:${order.id}:1` }]);
-  }
-  
-  if (currentStatus < 2) {
-    buttons.push([{ text: '📦 Готов к отправке', callback_data: `status:${order.id}:2` }]);
-  }
-  
-  if (currentStatus < 3) {
-    buttons.push([{ text: '🚗 В пути', callback_data: `status:${order.id}:3` }]);
-  }
-  
-  if (currentStatus < 4) {
-    buttons.push([{ text: '📬 Доставлен', callback_data: `status:${order.id}:4` }]);
-  }
-  
-  // Кнопка отмены всегда доступна, если заказ еще не отменен и не доставлен
-  if (currentStatus < 4) {
-    buttons.push([{ text: '❌ Отменить заказ', callback_data: `status:${order.id}:5` }]);
-  }
-  
-  // Добавляем кнопки навигации
-  buttons.push([{ text: '« Назад к деталям заказа', callback_data: `order:view:${order.id}` }]);
-  
-  await bot.sendMessage(chatId, `Выберите новый статус для заказа #${order.id}:`, {
-    reply_markup: {
-      inline_keyboard: buttons
-    }
-  });
-}
-
-/**
- * Показывает опции времени ожидания для поставщика
- * @param {number} chatId - ID чата
- * @param {Object} order - Объект заказа
- */
-async function showWaitingTimeOptions(chatId, order) {
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: '⏱ 5 минут', callback_data: `waiting:${order.id}:5` },
-        { text: '⏱ 10 минут', callback_data: `waiting:${order.id}:10` }
-      ],
-      [
-        { text: '⏱ 15 минут', callback_data: `waiting:${order.id}:15` },
-        { text: '⏱ 20 минут', callback_data: `waiting:${order.id}:20` }
-      ],
-      [
-        { text: '⏱ 30 минут', callback_data: `waiting:${order.id}:30` },
-        { text: '⏱ 40 минут', callback_data: `waiting:${order.id}:40` }
-      ],
-      [
-        { text: '« Пропустить', callback_data: `order:view:${order.id}` }
-      ]
-    ]
-  };
-  
-  await bot.sendMessage(chatId, 'Укажите примерное время ожидания готовности заказа:', {
     reply_markup: keyboard
   });
 }

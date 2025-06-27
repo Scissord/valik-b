@@ -1,60 +1,107 @@
 import axios from 'axios';
 import * as User from '#models/user.js';
-import * as Supplier from '#models/supplier.js';
+import knex from '#models/knex.js';
+import bcrypt from 'bcryptjs';
 
 // Объект для хранения сессий пользователей
 const userSessions = {};
 
 /**
- * Авторизация поставщика
- * @param {string} login - Логин поставщика
- * @param {string} password - Пароль поставщика
- * @returns {Promise<Object|null>} - Данные поставщика или null при ошибке
+ * Авторизация менеджера по логину и паролю
+ * @param {string} login - Логин менеджера
+ * @param {string} password - Пароль менеджера
+ * @returns {Promise<Object|null>} - Данные менеджера или null при ошибке
  */
-export const authSupplier = async (login, password) => {
+export const authAdmin = async (login, password) => {
   try {
-    const response = await axios.post('http://localhost:8080/suppliers/login', {
-      login,
-      password
-    });
+    console.log('Попытка авторизации менеджера:', login);
     
-    if (response.data && response.data.supplier) {
-      return {
-        user: response.data.supplier,
-        accessToken: response.data.accessToken,
-        role: 'supplier'
-      };
+    // Используем прямой SQL запрос через knex для надежности
+    const db = knex();
+    const manager = await db('user')
+      .where({ login, role: 'manager', deleted_at: null })
+      .first();
+    
+    console.log('Найден менеджер:', manager ? 'да' : 'нет');
+    
+    if (!manager) {
+      console.log('Менеджер не найден');
+      return null;
     }
-    return null;
+    
+    console.log('Сравниваем пароль с хешем:', password, manager.password);
+    
+    // Проверяем пароль
+    const isPasswordCorrect = await bcrypt.compare(password, manager.password);
+    console.log('Результат проверки пароля:', isPasswordCorrect);
+    
+    if (!isPasswordCorrect) {
+      console.log('Неверный пароль');
+      return null;
+    }
+    
+    console.log('Авторизация менеджера успешна:', manager.id);
+    return {
+      user: manager,
+      accessToken: 'manager_token',
+      role: 'admin' // Используем роль 'admin' для совместимости с существующим кодом
+    };
   } catch (error) {
-    console.error('Ошибка авторизации поставщика:', error.message);
+    console.error('Ошибка авторизации менеджера:', error);
     return null;
   }
 };
 
 /**
- * Авторизация клиента
- * @param {string} login - Логин клиента
- * @param {string} password - Пароль клиента
+ * Авторизация клиента по номеру телефона
+ * @param {string} phone - Номер телефона клиента
  * @returns {Promise<Object|null>} - Данные клиента или null при ошибке
  */
-export const authClient = async (login, password) => {
+export const authClientByPhone = async (phone) => {
   try {
-    const response = await axios.post('http://localhost:8080/auth/login', {
-      login,
-      password
-    });
+    // Удалим все нецифровые символы из номера телефона для нормализации
+    const normalizedPhone = phone.replace(/\D/g, '');
     
-    if (response.data && response.data.user) {
+    console.log('Поиск пользователя по номеру телефона:', normalizedPhone);
+    
+    // Попробуем найти пользователя с номером телефона, который заканчивается на normalizedPhone
+    const db = knex();
+    let user = null;
+    
+    try {
+      // Выполняем SQL запрос напрямую для поиска по LIKE
+      const result = await db('user')
+        .whereRaw('phone LIKE ?', [`%${normalizedPhone}`])
+        .andWhere('deleted_at', null)
+        .first();
+      
+      if (result) {
+        user = result;
+      }
+    } catch (dbError) {
+      console.error('Ошибка при поиске по LIKE:', dbError);
+    }
+    
+    if (!user) {
+      // Если не нашли по LIKE, пробуем точное совпадение
+      const users = await User.findWhereActive({ phone: normalizedPhone });
+      if (users && users.length > 0) {
+        user = users[0];
+      }
+    }
+    
+    console.log('Результат поиска пользователя:', user);
+    
+    if (user) {
       return {
-        user: response.data.user,
-        accessToken: response.data.accessToken,
-        role: 'client'
+        user,
+        accessToken: 'phone_auth_token',
+        role: user.role === 'manager' ? 'admin' : 'client' // Проверяем роль пользователя
       };
     }
     return null;
   } catch (error) {
-    console.error('Ошибка авторизации клиента:', error.message);
+    console.error('Ошибка авторизации клиента по телефону:', error);
     return null;
   }
 };
@@ -98,7 +145,7 @@ export const getSession = (telegramId) => {
  */
 export const isAuthenticated = (telegramId) => {
   const session = getSession(telegramId);
-  return !!session && !!session.user && !!session.accessToken;
+  return !!session && !!session.user;
 };
 
 /**
@@ -127,32 +174,22 @@ export const logout = (telegramId) => {
 export const autoAuthByTelegramId = async (telegramId) => {
   try {
     // Проверяем, есть ли пользователь с таким Telegram ID
-    const user = await User.findWhereActive({ telegram_id: String(telegramId) });
+    const users = await User.findWhereActive({ telegram_id: String(telegramId) });
+    const user = users && users.length > 0 ? users[0] : null;
     
-    if (user && user.length > 0) {
+    if (user) {
+      // Определяем роль на основе записи в БД
+      const role = user.role === 'manager' || user.role === 'admin' ? 'admin' : 'client';
+      
       // Создаем сессию пользователя
       return createSession(telegramId, {
-        user: user[0],
-        role: 'client',
-        // Для простоты MVP не используем полноценный accessToken
+        user,
+        role,
         accessToken: 'telegram_auto_auth'
       });
     }
     
-    // Проверяем, есть ли поставщик с таким Telegram ID
-    const supplier = await Supplier.findWhereActive({ telegram_id: String(telegramId) });
-    
-    if (supplier && supplier.length > 0) {
-      // Создаем сессию поставщика
-      return createSession(telegramId, {
-        user: supplier[0],
-        role: 'supplier',
-        // Для простоты MVP не используем полноценный accessToken
-        accessToken: 'telegram_auto_auth'
-      });
-    }
-    
-    // Если не нашли ни пользователя, ни поставщика
+    // Если не нашли пользователя
     return null;
   } catch (error) {
     console.error('Ошибка при автоматической авторизации по Telegram ID:', error);
@@ -161,25 +198,37 @@ export const autoAuthByTelegramId = async (telegramId) => {
 };
 
 /**
- * Инициирует процесс авторизации
+ * Инициирует процесс авторизации администратора
  * @param {number} telegramId - ID пользователя в Telegram
- * @param {string} role - Роль (client или supplier)
  * @returns {Object} - Состояние авторизации
  */
-export const startAuthProcess = (telegramId, role) => {
+export const startAdminAuthProcess = (telegramId) => {
   // Создаем или обновляем сессию
   const session = getSession(telegramId) || createSession(telegramId, {});
   
   // Устанавливаем состояние авторизации
-  session.authState = 'awaiting_login';
-  session.authRole = role;
+  session.authState = 'awaiting_admin_login';
+  
+  return session;
+};
+
+/**
+ * Инициирует процесс авторизации клиента по телефону
+ * @param {number} telegramId - ID пользователя в Telegram
+ * @returns {Object} - Состояние авторизации
+ */
+export const startClientPhoneAuthProcess = (telegramId) => {
+  // Создаем или обновляем сессию
+  const session = getSession(telegramId) || createSession(telegramId, {});
+  
+  // Устанавливаем состояние авторизации
+  session.authState = 'awaiting_phone';
   
   return session;
 };
 
 /**
  * Очистка старых сессий
- * Вызывайте эту функцию периодически для очистки неактивных сессий
  * @param {number} maxAge - Максимальный возраст сессии в миллисекундах (по умолчанию 24 часа)
  */
 export const cleanupSessions = (maxAge = 24 * 60 * 60 * 1000) => {
@@ -196,14 +245,15 @@ export const cleanupSessions = (maxAge = 24 * 60 * 60 * 1000) => {
 
 // Экспортируем все функции
 export default {
-  authSupplier,
-  authClient,
+  authAdmin,
+  authClientByPhone,
   createSession,
   getSession,
   isAuthenticated,
   getUserRole,
   logout,
   autoAuthByTelegramId,
-  startAuthProcess,
+  startAdminAuthProcess,
+  startClientPhoneAuthProcess,
   cleanupSessions
 }; 

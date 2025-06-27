@@ -35,12 +35,11 @@ export const get = async (req, res) => {
 
 export const create = async (req, res) => {
   const user = req.user;
-  const { cart, supplier_id } = req.body;
+  const { cart } = req.body;
 
   let total = 0;
   const order = await Order.create({
-    user_id: user.id,
-    supplier_id: supplier_id || null // Добавляем поставщика, если указан
+    user_id: user.id
   });
 
   // Массив для хранения информации о товарах для уведомления

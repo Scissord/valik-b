@@ -10,6 +10,8 @@ export const up = function (knex) {
     table.string('email', 255).notNullable().unique();
     table.string('full_name', 255).notNullable();
     table.string('phone', 20).nullable();
+    table.string('telegram_id', 50).nullable();
+    table.enum('role', ['client', 'manager', 'admin']).defaultTo('client').notNullable();
     table.bigInteger('birth_date').nullable();
     table.enum('gender', ['male', 'female']).nullable();
     table.text('address').nullable();
