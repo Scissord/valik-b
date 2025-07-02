@@ -28,6 +28,9 @@ router.use('/search', searchRoutes);
 router.use('/brands', brandRoutes);
 router.use('/units', unitRoutes);
 router.use('/managers', managerRoutes);
-router.use('/uploads', express.static('uploads'));
+router.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static('uploads'));
 
 export default router;
