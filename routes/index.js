@@ -29,5 +29,10 @@ router.use('/brands', brandRoutes);
 router.use('/units', unitRoutes);
 router.use('/managers', managerRoutes);
 router.use('/uploads', express.static('uploads'));
+router.use('/uploads', express.static('uploads'), {
+  setHeaders: function (res, path) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+});
 
 export default router;
