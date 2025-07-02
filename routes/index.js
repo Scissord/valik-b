@@ -11,6 +11,7 @@ import chatRoutes from './chatRoute.js';
 import searchRoutes from './searchRoute.js';
 import brandRoutes from './brandRoute.js';
 import unitRoutes from './unitRoute.js';
+import managerRoutes from './managerRoute.js';
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ router.use('/api/chats', chatRoutes);
 router.use('/search', searchRoutes);
 router.use('/brands', brandRoutes);
 router.use('/units', unitRoutes);
+router.use('/managers', managerRoutes);
 router.use('/uploads', express.static('uploads'));
 
 export default router;

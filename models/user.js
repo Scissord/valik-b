@@ -8,6 +8,10 @@ export const get = async () => {
   return await userRepository.getActive();
 };
 
+export const getWhereActive = async function (query) {
+  return await userRepository.getWhereActive(query);
+};
+
 export const create = async data => {
   return await userRepository.create(data);
 };

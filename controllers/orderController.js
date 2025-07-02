@@ -71,9 +71,6 @@ export const create = async (req, res) => {
   // Отправляем уведомление в Telegram
   try {
     const updatedOrder = await Order.find(order.id);
-    // Получаем информацию о пользователе для уведомления
-    updatedOrder.name = user.name || user.login || 'Пользователь';
-    updatedOrder.phone = user.phone || 'Не указан';
     await sendOrderNotification(updatedOrder, orderItems);
   } catch (error) {
     console.error('Ошибка отправки уведомления:', error.message);

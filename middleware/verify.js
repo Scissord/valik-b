@@ -67,6 +67,12 @@ const verify = (entity) => async (req, res, next) => {
       });
 
     req[entity] = role;
+    
+    // Добавляем информацию о роли для удобного доступа
+    if (entity === 'user' && role.role) {
+      console.log('Установка роли пользователя:', role.role);
+    }
+    
     next();
   } catch (err) {
     console.log('Error in verify middleware', err.message);
