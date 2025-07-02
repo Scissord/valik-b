@@ -3,11 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import * as File from '#models/file.js';
 
-const port = process.env.PORT;
-const url =
-  process.env.NODE_ENV === 'development'
-    ? `http://localhost:${port}/uploads`
-    : `${process.env.URL}${port}/uploads`;
+const url = `${process.env.URL}:${process.env.PORT}/uploads`;
 
 export default function getMulterStorage() {
   return multer.diskStorage({
