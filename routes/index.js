@@ -1,7 +1,4 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import authRoutes from './authRoute.js';
 import productRoutes from './productRoute.js';
 import orderRoutes from './orderRoute.js';
@@ -15,9 +12,6 @@ import searchRoutes from './searchRoute.js';
 import brandRoutes from './brandRoute.js';
 import unitRoutes from './unitRoute.js';
 import managerRoutes from './managerRoute.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const router = express.Router();
 
@@ -34,10 +28,6 @@ router.use('/search', searchRoutes);
 router.use('/brands', brandRoutes);
 router.use('/units', unitRoutes);
 router.use('/managers', managerRoutes);
-router.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: function (res, path) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-}));
+router.use('/uploads', express.static('uploads'));
 
 export default router;
