@@ -197,6 +197,26 @@ export const getProducts = async (req, res) => {
   }
 };
 
+export const findProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const supplier_id = req.supplier.id;
+
+    const product = await Product.find(id);
+    if (+product.supplier_id !== +supplier_id) {
+      res.status(400).send({
+        message: 'Данный продукт не относится к поставщику!'
+      });
+      return;
+    }
+
+    res.status(200).send(product);
+  } catch (err) {
+    console.log('Error in get products for suppliers controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
 export const createProduct = async (req, res) => {
   try {
     const supplier_id = req.supplier.id;
