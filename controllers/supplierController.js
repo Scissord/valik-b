@@ -197,6 +197,35 @@ export const getProducts = async (req, res) => {
   }
 };
 
+export const createPhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const supplier_id = req.supplier.id;
+
+    const product = await Product.find(id);
+    if (+product.supplier_id !== +supplier_id) {
+      res.status(400).send({
+        message: 'Данный продукт не относится к поставщику!'
+      });
+      return;
+    }
+
+    for (const file of req.savedFiles) {
+      if (file.mimetype?.startsWith('image/')) {
+        await ProductImage.create({
+          product_id: product.id,
+          file_id: file.id
+        });
+      }
+    }
+
+    res.status(200).send({ message: 'OK' });
+  } catch (err) {
+    console.log('Error in create photos for suppliers controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
 export const findProduct = async (req, res) => {
   try {
     const { id } = req.params;
