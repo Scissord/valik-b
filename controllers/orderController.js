@@ -2,7 +2,8 @@ import * as Order from '#models/order.js';
 import * as OrderItem from '#models/order_item.js';
 import * as Product from '#models/product.js';
 import formatDate from '#utils/formatDate.js';
-import { sendOrderNotification } from '#utils/telegramNotifier.js';
+import { sendOrderNotification as sendClientNotification } from '#utils/telegramNotifier.js';
+import { sendOrderNotification as sendManagerNotification } from '#utils/telegramManagerBot.js';
 
 export const get = async (req, res) => {
   const user = req.user;
@@ -71,9 +72,11 @@ export const create = async (req, res) => {
   // Отправляем уведомление в Telegram
   try {
     const updatedOrder = await Order.find(order.id);
-    await sendOrderNotification(updatedOrder, orderItems);
+    // Отправляем уведомление клиенту
+    await sendClientNotification(updatedOrder, orderItems);
+    // Отправляем уведомление менеджеру
+    await sendManagerNotification(updatedOrder, orderItems);
   } catch (error) {
-    console.error('Ошибка отправки уведомления:', error.message);
     // Продолжаем выполнение, даже если отправка уведомления не удалась
   }
 

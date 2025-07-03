@@ -14,33 +14,23 @@ const userSessions = {};
  */
 export const authAdmin = async (login, password) => {
   try {
-    console.log('Попытка авторизации менеджера:', login);
-    
     // Используем прямой SQL запрос через knex для надежности
     const db = knex();
     const manager = await db('user')
       .where({ login, role: 'manager', deleted_at: null })
       .first();
     
-    console.log('Найден менеджер:', manager ? 'да' : 'нет');
-    
     if (!manager) {
-      console.log('Менеджер не найден');
       return null;
     }
-    
-    console.log('Сравниваем пароль с хешем:', password, manager.password);
     
     // Проверяем пароль
     const isPasswordCorrect = await bcrypt.compare(password, manager.password);
-    console.log('Результат проверки пароля:', isPasswordCorrect);
     
     if (!isPasswordCorrect) {
-      console.log('Неверный пароль');
       return null;
     }
     
-    console.log('Авторизация менеджера успешна:', manager.id);
     return {
       user: manager,
       accessToken: 'manager_token',
@@ -61,8 +51,6 @@ export const authClientByPhone = async (phone) => {
   try {
     // Удалим все нецифровые символы из номера телефона для нормализации
     const normalizedPhone = phone.replace(/\D/g, '');
-    
-    console.log('Поиск пользователя по номеру телефона:', normalizedPhone);
     
     // Попробуем найти пользователя с номером телефона, который заканчивается на normalizedPhone
     const db = knex();
@@ -89,8 +77,6 @@ export const authClientByPhone = async (phone) => {
         user = users[0];
       }
     }
-    
-    console.log('Результат поиска пользователя:', user);
     
     if (user) {
       return {
