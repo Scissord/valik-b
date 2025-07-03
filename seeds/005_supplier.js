@@ -9,18 +9,9 @@ export const seed = async knex => {
     {
       id: 1,
       login: 'supplier1',
-      password: '$2a$12$Tmpo8xhElWiGRgTOPMPGa.iep.93eYhY2cwv5VZ07GB1fgQE1Rm1G'
+      // 12345678
+      password: '$2a$12$gw5Kxp4vcGhdTNPzDAuufe1rF9gD9nf1v7Ez4o4.L.5PMhxjJgZca'
     },
-    {
-      id: 2,
-      login: 'supplier2',
-      password: '$2a$12$Tmpo8xhElWiGRgTOPMPGa.iep.93eYhY2cwv5VZ07GB1fgQE1Rm1G'
-    },
-    {
-      id: 3,
-      login: 'supplier3',
-      password: '$2a$12$Tmpo8xhElWiGRgTOPMPGa.iep.93eYhY2cwv5VZ07GB1fgQE1Rm1G'
-    }
   ]);
 
   await knex.raw("SELECT setval('supplier_id_seq', (SELECT MAX(id) FROM supplier))");
