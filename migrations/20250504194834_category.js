@@ -6,7 +6,6 @@ export const up = function (knex) {
   return knex.schema.createTable('category', table => {
     table.bigIncrements('id').primary();
     table.string('title', 100).notNullable();
-    table.string('slug', 100).notNullable();
     table.integer('parent_id').nullable();
 
     table

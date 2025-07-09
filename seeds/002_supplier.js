@@ -8,9 +8,9 @@ export const seed = async knex => {
   await knex('supplier').insert([
     {
       id: 1,
-      login: 'supplier1',
-      // 12345678
-      password: '$2a$12$gw5Kxp4vcGhdTNPzDAuufe1rF9gD9nf1v7Ez4o4.L.5PMhxjJgZca'
+      login: 'n10',
+      // superstrongpass666@
+      password: '$2a$10$qNQxTkJL1VIP4ox.PEygt.V87bCO//D8hc3S8B6c82PBK4TcGuqs.',
     },
   ]);
 
