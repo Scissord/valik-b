@@ -4,6 +4,7 @@ import * as Supplier from '#models/supplier.js';
 import * as SupplierToken from '#models/supplier_token.js';
 import * as Product from '#models/product.js';
 import * as ProductImage from '#models/product_image.js';
+import * as File from '#models/file.js'; 
 import generateTokens from '#utils/tokens/generateSupplierTokens.js';
 
 export const supplierLogin = async (req, res) => {
@@ -222,6 +223,36 @@ export const createPhoto = async (req, res) => {
     res.status(200).send({ message: 'OK' });
   } catch (err) {
     console.log('Error in create photos for suppliers controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const deletePhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { link } = req.body;
+    const supplier_id = req.supplier.id;
+
+    const product = await Product.find(id);
+    if (+product.supplier_id !== +supplier_id) {
+      res.status(400).send({
+        message: 'Данный продукт не относится к поставщику!'
+      });
+      return;
+    }
+
+    console.log(id);
+    console.log(req.body);
+
+    const file = await File.findWhere({ link });
+    console.log(file);
+    const updated_product_image = await ProductImage.softDeleteWhere({ product_id: id, file_id: file.id });
+
+    console.log('Успешно удалил файл');
+
+    res.status(200).send(updated_product_image);
+  } catch (err) {
+    console.log('Error in delete photos for suppliers controller', err.message);
     res.status(500).send({ error: 'Internal Server Error' });
   }
 };

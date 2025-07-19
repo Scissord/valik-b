@@ -22,7 +22,8 @@ router.post('/registration', validate(registrationValidation), controller.suppli
 // for with supplier products
 router.post('/products', verify('supplier'), upload.array('files', 10), controller.createProduct);
 router.get('/products', verify('supplier'), controller.getProducts);
-router.post('/products/:id', verify('supplier'), upload.array('files', 10), controller.createPhoto);
+router.post('/products/photos/add/:id', verify('supplier'), upload.array('files', 10), controller.createPhoto);
+router.post('/products/photos/delete/:id', verify('supplier'), controller.deletePhoto);
 router.get('/products/:id', verify('supplier'), controller.findProduct);
 router.patch('/products/:id', verify('supplier'), controller.updateProduct);
 router.delete('/products/:id', verify('supplier'), controller.deleteProduct);

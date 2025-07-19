@@ -18,6 +18,10 @@ export const softDelete = async id => {
   return await productImageRepository.softDelete(id);
 };
 
+export const softDeleteWhere = async query => {
+  return await productImageRepository.softDelete(query);
+};
+
 export const hardDelete = async id => {
   return await productImageRepository.hardDelete(id);
 };
