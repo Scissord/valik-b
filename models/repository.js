@@ -80,6 +80,17 @@ const repository = tableName => {
       return deletedRecord;
     },
 
+    softDeleteWhere: async query => {
+      const deleted_at = Math.floor(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const [deletedRecord] = await db(tableName)
+        .where(query)
+        .update('deleted_at', deleted_at)
+        .returning('*');
+
+      return deletedRecord;
+    },
+
     // hard delete record by id
     hardDelete: async id => {
       await db(tableName).where('id', id).del();
