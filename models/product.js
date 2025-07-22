@@ -14,7 +14,7 @@ export const getForMainPage = async (limit = 9, page = 1) => {
             SELECT json_agg(f.link)
             FROM product_image pi
             JOIN file f ON f.id = pi.file_id
-            WHERE pi.product_id = p.id
+            WHERE pi.product_id = p.id AND pi.deleted_at IS NULL
           ), '[]'
         ) as images
       `)
@@ -46,7 +46,7 @@ export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
             SELECT json_agg(f.link)
             FROM product_image pi
             JOIN file f ON f.id = pi.file_id
-            WHERE pi.product_id = p.id
+            WHERE pi.product_id = p.id AND pi.deleted_at IS NULL
           ), '[]'
         ) as images
       `)
@@ -107,7 +107,7 @@ export const find = async id => {
             SELECT json_agg(f.link)
             FROM product_image pi
             JOIN file f ON f.id = pi.file_id
-            WHERE pi.product_id = p.id
+            WHERE pi.product_id = p.id AND pi.deleted_at IS NULL
           ), '[]'
         ) as images
       `),
