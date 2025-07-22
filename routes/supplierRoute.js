@@ -15,9 +15,9 @@ const router = express.Router();
 
 // work with supplier authorization
 router.post('/login', validate(loginValidation), controller.supplierLogin);
+router.post('/registration', validate(registrationValidation), controller.supplierRegistration);
 router.post('/logout', verify('supplier'), controller.supplierLogout);
 router.post('/refresh', verify('supplier'), controller.supplierRefresh);
-router.post('/registration', validate(registrationValidation), controller.supplierRegistration);
 
 // for with supplier products
 router.post('/products', verify('supplier'), upload.array('files', 10), controller.createProduct);
