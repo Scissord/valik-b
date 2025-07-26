@@ -16,10 +16,13 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      // for development
+      // for development supplier
       'http://localhost:5173',
-      // for prebuild preview
+      // for prebuild preview supplier
       'http://localhost:4173',
+      // for development frontend
+      'http://localhost:3000',
+      'http://194.32.141.143',
       // '*',
       "https://valik.kz",
       "https://supplier.valik.kz"
