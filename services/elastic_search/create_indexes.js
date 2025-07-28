@@ -4,13 +4,13 @@ import * as Category from '#models/category.js';
 import es from '#services/elastic_search/es.js';
 
 async function create_indexes() {
-  for (const index of ['products', 'brands', 'categories']) {
-    try {
-      await es.indices.delete({ index });
-    } catch (err) {
-      if (err.meta?.statusCode !== 404) console.error(`Ошибка удаления индекса ${index}:`, err);
-    }
-  };
+  // for (const index of ['products', 'brands', 'categories']) {
+  //   try {
+  //     await es.indices.delete({ index });
+  //   } catch (err) {
+  //     if (err.meta?.statusCode !== 404) console.error(`Ошибка удаления индекса ${index}:`, err);
+  //   }
+  // };
 
   const products = await Product.getForSearch();
   const brands = await Brand.getForSearch();
