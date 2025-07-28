@@ -7,7 +7,7 @@ const db = knex();
 const categoryRepository = repository('category');
 
 export const getTree = async () => {
-  const all_categories = await db('category as c').select('*').orderBy('id', 'asc');
+  const all_categories = await db('category as c').select('*').orderBy('id', 'asc').whereNull('deleted_at');
 
   const categories = buildTree(all_categories, null);
 
