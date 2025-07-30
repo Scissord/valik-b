@@ -23,7 +23,16 @@ export const getMessages = async (chatId) => {
 };
 
 export const softDelete = async (id) => {
-  return await chatRepository.softDelete(id);
+  // Используем текущую дату в формате ISO, который поддерживается PostgreSQL
+  const deleted_at = new Date().toISOString();
+  
+  // Обновляем запись напрямую, минуя репозиторий
+  const [deletedRecord] = await db('chat')
+    .where('id', id)
+    .update({ deleted_at })
+    .returning('*');
+  
+  return deletedRecord;
 };
 
 export const getChatsForUser = async (userId) => {
