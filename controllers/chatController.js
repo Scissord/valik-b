@@ -72,8 +72,9 @@ export const getChatMessages = async (req, res) => {
         message: 'Чат не найден'
       });
     }
-
-    if (userId && chat.user_id !== userId) {
+    
+    // Преобразуем оба значения в строки перед сравнением
+    if (userId && String(chat.user_id) !== String(userId)) {
       return res.status(403).json({
         success: false,
         message: 'Доступ запрещен'
