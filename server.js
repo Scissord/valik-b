@@ -23,13 +23,16 @@ app.use(
       // for development frontend
       'http://localhost:3000',
       'http://194.32.141.143',
-      // '*',
-      "https://valik.kz",
-      "https://supplier.valik.kz"
+      // main site
+      'https://valik.kz',
+      'https://www.valik.kz',
+      // main site for supplier
+      'https://supplier.valik.kz',
+      'https://www.supplier.valik.kz'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   })
 );
 
@@ -38,7 +41,7 @@ app.use('', routes);
 
 app.listen(PORT, () => {
   console.log(`Welcome to cv server, port ${PORT} ✅✅✅`);
-  
+
   // Инициализируем Telegram бота
   initTelegramBot();
 });
