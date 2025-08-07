@@ -37,6 +37,19 @@ export const find = async (limit = 9, page = 1, category_id = null) => {
     .orderBy('id', 'asc');
 
   const result = await db('product as p')
+    .select(
+      'p.*',
+      db.raw(`
+        COALESCE(
+          (
+            SELECT json_agg(f.link)
+            FROM product_image pi
+            JOIN file f ON f.id = pi.file_id
+            WHERE pi.product_id = p.id AND pi.deleted_at IS NULL
+          ), '[]'
+        ) as images
+      `)
+    )
     .orderBy('id', 'asc')
     .where('p.category_id', category_id)
     .whereNull('p.deleted_at')
