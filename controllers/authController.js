@@ -19,7 +19,7 @@ export const userLogin = async (req, res) => {
   // 2. Find user in database
   const query = { login };
   const query2 = { email: login };
-  const user = await User.findWhereActive(query);
+  let user = await User.findWhereActive(query);
 
   // 3. If user is not found
   if (!user) {
