@@ -17,11 +17,17 @@ export const userLogin = async (req, res) => {
   }
 
   // 2. Find user in database
-  const user = await User.findWhereActive({ login });
+  const query = { login };
+  const query2 = { email: login };
+  const user = await User.findWhereActive(query);
 
   // 3. If user is not found
   if (!user) {
-    res.status(400).send({ message: 'Данный поставщик не найден!' });
+    user = await User.findWhereActive(query2);
+  }
+
+  if (!user) {
+    res.status(400).send({ message: 'Данный пользователь не найден!' });
     return;
   }
 
