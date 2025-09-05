@@ -81,6 +81,32 @@ export const getWhere = async query => {
   return await productRepository.getWhere(query);
 };
 
+// Поиск товаров по ключевым словам (частичное совпадение по title)
+export const searchByKeywords = async (keywords = [], limit = 60) => {
+  const q = (Array.isArray(keywords) ? keywords : String(keywords).split(/[\s,]+/))
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  if (q.length === 0) {
+    return await db('product as p')
+      .select('p.id', 'p.title', 'p.price')
+      .whereNull('p.deleted_at')
+      .orderBy('p.id', 'asc')
+      .limit(limit);
+  }
+
+  return await db('product as p')
+    .select('p.id', 'p.title', 'p.price')
+    .whereNull('p.deleted_at')
+    .andWhere(builder => {
+      q.forEach(term => {
+        builder.orWhere('p.title', 'ilike', `%${term}%`);
+      });
+    })
+    .orderBy('p.id', 'asc')
+    .limit(limit);
+};
+
 export const create = async data => {
   return await productRepository.create(data);
 };

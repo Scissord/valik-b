@@ -6,6 +6,7 @@ import validate from '#middleware/validate.js';
 const router = express.Router();
 
 // нет verify на user, так как все могут видеть продукты
+router.get('/', controller.getAll);
 router.get('/main', validate(getValidation), controller.getForMainPage);
 
 // нет verify на user, так как все могут видеть инфу о продукте

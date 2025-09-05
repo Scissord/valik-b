@@ -15,6 +15,24 @@ export const getForMainPage = async (req, res) => {
   });
 };
 
+export const getAll = async (req, res) => {
+  try {
+    const products = await Product.get();
+    
+    res.status(200).send({
+      success: true,
+      data: products,
+      total: products.length
+    });
+  } catch (error) {
+    console.error('Ошибка при получении всех продуктов:', error);
+    res.status(500).send({
+      success: false,
+      message: 'Внутренняя ошибка сервера'
+    });
+  }
+};
+
 export const find = async (req, res) => {
   const id = req.params.product_id;
   const product = await Product.find(id);
