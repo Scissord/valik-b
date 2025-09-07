@@ -407,7 +407,12 @@ async function showClientOrderDetails(chatId, order) {
     
     const date = new Date(parseInt(order.created_at));
     const formattedDate = `${date.getDate()}.${date.getMonth()+1}.${date.getFullYear()}`;
-    message += `Дата заказа: ${formattedDate}\n\n`;
+    message += `Дата заказа: ${formattedDate}\n`;
+    message += `🏠 Адрес доставки: ${order.address || 'Не указан'}\n`;
+    if (order.additional_info) {
+      message += `📝 Комментарий: ${order.additional_info}\n`;
+    }
+    message += `\n`;
     
     message += '*Товары:*\n';
     
@@ -529,7 +534,12 @@ async function getOrderDetails(order, items) {
   }
   
   message += `👤 *Клиент:* ${userInfo}\n`;
-  message += `📅 *Дата:* ${new Date(parseInt(order.created_at)).toLocaleString()}\n\n`;
+  message += `📅 *Дата:* ${new Date(parseInt(order.created_at)).toLocaleString()}\n`;
+  message += `🏠 *Адрес доставки:* ${order.address || 'Не указан'}\n`;
+  if (order.additional_info) {
+    message += `📝 *Комментарий:* ${order.additional_info}\n`;
+  }
+  message += `\n`;
   
   message += '*Товары:*\n';
   
