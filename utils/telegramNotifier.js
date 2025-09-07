@@ -527,7 +527,6 @@ async function getOrderDetails(order, items) {
       userInfo = `${user.name || 'Клиент'}\n`;
       userInfo += `📱 Телефон: ${user.phone || 'Не указан'}\n`;
       userInfo += `📧 Email: ${user.email || 'Не указан'}\n`;
-      userInfo += `🏠 Адрес: ${user.address || 'Не указан'}\n`;
     }
   } catch (error) {
     console.error('Ошибка при получении данных пользователя:', error);
