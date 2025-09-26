@@ -12,12 +12,12 @@
 ```
 # Настройки бота для клиентов
 TELEGRAM_CLIENT_BOT_TOKEN=токен_бота_для_клиентов
-TELEGRAM_CLIENT_CHAT_ID=id_чата_для_клиентского_бота
 
 # Настройки бота для менеджеров
 TELEGRAM_MANAGER_BOT_TOKEN=токен_бота_для_менеджеров
-TELEGRAM_MANAGER_CHAT_ID=id_чата_для_менеджеров
-```
+
+#Настройки бота для поставщиков
+TELEGRAM_SUPPLIER_BOT_TOKEN=токен_бота_поставщиков
 
 ## Получение токенов
 

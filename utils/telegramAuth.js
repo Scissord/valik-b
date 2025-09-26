@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as User from '#models/user.js';
+import * as Supplier from '#models/supplier.js';
 import knex from '#models/knex.js';
 import bcrypt from 'bcryptjs';
 
@@ -38,6 +39,26 @@ export const authAdmin = async (login, password) => {
     };
   } catch (error) {
     console.error('Ошибка авторизации менеджера:', error);
+    return null;
+  }
+};
+
+/**
+ * Авторизация поставщика по логину и паролю
+ */
+export const authSupplier = async (login, password) => {
+  try {
+    const supplier = await Supplier.findWhereActive({ login });
+    if (!supplier) return null;
+    const isPasswordCorrect = await bcrypt.compare(password, supplier.password);
+    if (!isPasswordCorrect) return null;
+    return {
+      user: supplier,
+      accessToken: 'supplier_token',
+      role: 'supplier'
+    };
+  } catch (error) {
+    console.error('Ошибка авторизации поставщика:', error);
     return null;
   }
 };
@@ -159,7 +180,7 @@ export const logout = (telegramId) => {
  */
 export const autoAuthByTelegramId = async (telegramId) => {
   try {
-    // Проверяем, есть ли пользователь с таким Telegram ID
+    // Проверяем, есть ли пользователь (manager/client) с таким Telegram ID
     const users = await User.findWhereActive({ telegram_id: String(telegramId) });
     const user = users && users.length > 0 ? users[0] : null;
     
@@ -175,7 +196,17 @@ export const autoAuthByTelegramId = async (telegramId) => {
       });
     }
     
-    // Если не нашли пользователя
+    // Иначе проверяем поставщика по полю telegram_id
+    const suppliers = await Supplier.findWhereActive({ telegram_id: String(telegramId) });
+    const supplier = suppliers && suppliers.length > 0 ? suppliers[0] : null;
+    if (supplier) {
+      return createSession(telegramId, {
+        user: supplier,
+        role: 'supplier',
+        accessToken: 'telegram_auto_auth_supplier'
+      });
+    }
+
     return null;
   } catch (error) {
     console.error('Ошибка при автоматической авторизации по Telegram ID:', error);
@@ -232,6 +263,7 @@ export const cleanupSessions = (maxAge = 24 * 60 * 60 * 1000) => {
 // Экспортируем все функции
 export default {
   authAdmin,
+  authSupplier,
   authClientByPhone,
   createSession,
   getSession,

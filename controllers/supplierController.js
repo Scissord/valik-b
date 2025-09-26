@@ -5,6 +5,8 @@ import * as SupplierToken from '#models/supplier_token.js';
 import * as Product from '#models/product.js';
 import * as ProductImage from '#models/product_image.js';
 import * as File from '#models/file.js'; 
+import * as OrderItem from '#models/order_item.js';
+import * as Order from '#models/order.js';
 import generateTokens from '#utils/tokens/generateSupplierTokens.js';
 
 export const supplierLogin = async (req, res) => {
@@ -211,7 +213,13 @@ export const createPhoto = async (req, res) => {
       return;
     }
 
-    for (const file of req.savedFiles) {
+    const incomingFiles = Array.isArray(req.savedFiles)
+      ? req.savedFiles
+      : Array.isArray(req.files)
+      ? req.files
+      : [];
+
+    for (const file of incomingFiles) {
       if (file.mimetype?.startsWith('image/')) {
         await ProductImage.create({
           product_id: product.id,
@@ -286,7 +294,13 @@ export const createProduct = async (req, res) => {
       supplier_id
     });
 
-    for (const file of req.savedFiles) {
+    const incomingFiles = Array.isArray(req.savedFiles)
+      ? req.savedFiles
+      : Array.isArray(req.files)
+      ? req.files
+      : [];
+
+    for (const file of incomingFiles) {
       if (file.mimetype?.startsWith('image/')) {
         await ProductImage.create({
           product_id: product.id,
@@ -345,6 +359,45 @@ export const deleteProduct = async (req, res) => {
     res.status(200).send(updated_product);
   } catch (err) {
     console.log('Error in delete product for supplier controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const getOwnOrderItems = async (req, res) => {
+  try {
+    const supplier_id = req.supplier.id;
+    const { status, limit, page } = req.query;
+    const items = await OrderItem.getForSupplier(supplier_id, { status, limit, page });
+    res.status(200).send(items);
+  } catch (err) {
+    console.log('Error in get own order items controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const updateOwnOrderItemStatus = async (req, res) => {
+  try {
+    const supplier_id = req.supplier.id;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (status === undefined || status === null) {
+      res.status(400).send({ message: 'Не указан статус!' });
+      return;
+    }
+
+    const updated = await OrderItem.updateStatusOwned(id, supplier_id, status);
+    if (!updated) {
+      res.status(404).send({ message: 'Позиция не найдена или не принадлежит поставщику' });
+      return;
+    }
+
+    // Попробуем автообновить заказ, если все позиции достигли этого статуса
+    await Order.updateStatusIfAllItems(updated.order_id, status);
+
+    res.status(200).send(updated);
+  } catch (err) {
+    console.log('Error in update own order item status controller', err.message);
     res.status(500).send({ error: 'Internal Server Error' });
   }
 };

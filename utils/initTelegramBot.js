@@ -1,5 +1,6 @@
 import { bot as clientBot } from './telegramNotifier.js';
 import { bot as managerBot } from './telegramManagerBot.js';
+import { bot as supplierBot } from './telegramSupplierBot.js';
 import * as telegramAuth from './telegramAuth.js';
 
 /**
@@ -37,6 +38,19 @@ export const initTelegramBot = () => {
     // Логирование ошибок webhook
     managerBot.on('webhook_error', (error) => {
       console.error('Ошибка webhook Telegram бота для менеджеров:', error.message);
+    });
+  }
+
+  // Инициализация бота для поставщиков
+  if (!supplierBot) {
+    console.log('Telegram бот для поставщиков не настроен. Проверьте TELEGRAM_SUPPLIER_BOT_TOKEN');
+  } else {
+    console.log('Telegram бот для поставщиков успешно инициализирован');
+    supplierBot.on('polling_error', (error) => {
+      console.error('Ошибка в работе Telegram бота для поставщиков:', error.message);
+    });
+    supplierBot.on('webhook_error', (error) => {
+      console.error('Ошибка webhook Telegram бота для поставщиков:', error.message);
     });
   }
 

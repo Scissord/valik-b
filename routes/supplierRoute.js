@@ -28,4 +28,8 @@ router.get('/products/:id', verify('supplier'), controller.findProduct);
 router.patch('/products/:id', verify('supplier'), controller.updateProduct);
 router.delete('/products/:id', verify('supplier'), controller.deleteProduct);
 
+// supplier order items
+router.get('/order-items', verify('supplier'), controller.getOwnOrderItems);
+router.patch('/order-items/:id/status', verify('supplier'), controller.updateOwnOrderItemStatus);
+
 export default router;

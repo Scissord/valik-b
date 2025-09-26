@@ -43,3 +43,24 @@ export const find = async id => {
 export const findWhere = async function (query) {
   return await orderRepository.findWhere(query);
 };
+
+export const updateStatusIfAllItems = async (order_id, targetStatus) => {
+  // Обновляем статус заказа только если все позиции доставлены (статус 4)
+  if (+targetStatus !== 4) return null;
+
+  const [{ count: total }] = await db('order_item')
+    .where({ order_id })
+    .andWhere('deleted_at', null)
+    .count('*');
+  const [{ count: delivered }] = await db('order_item')
+    .where({ order_id, status: 4 })
+    .andWhere('deleted_at', null)
+    .count('*');
+
+  if (+total === 0) return null;
+
+  if (+total === +delivered) {
+    return await update(order_id, { status: 4 });
+  }
+  return null;
+};

@@ -41,6 +41,54 @@ export const getByOrderIdBeforeShipment = async order_id => {
     .orderBy('oi.id', 'asc');
 };
 
+export const getForSupplier = async (supplier_id, { status, limit, page } = {}) => {
+  let query = db('order_item as oi')
+    .select('oi.*')
+    .join('product as p', 'p.id', 'oi.product_id')
+    .where('p.supplier_id', supplier_id)
+    .andWhere('oi.deleted_at', null)
+    .orderBy('oi.id', 'desc');
+
+  if (status !== undefined && status !== null && status !== '') {
+    query = query.andWhere('oi.status', status);
+  }
+
+  if (limit) {
+    query = query.limit(+limit);
+    if (page) {
+      const offset = (+page - 1) * +limit;
+      query = query.offset(offset);
+    }
+  }
+
+  return await query;
+};
+
+export const updateStatusOwned = async (id, supplier_id, status) => {
+  const canUpdate = await db('order_item as oi')
+    .join('product as p', 'p.id', 'oi.product_id')
+    .where('oi.id', id)
+    .andWhere('p.supplier_id', supplier_id)
+    .andWhere('oi.deleted_at', null)
+    .first('oi.id');
+
+  if (!canUpdate) return null;
+
+  const [updated] = await db('order_item')
+    .where({ id })
+    .update({ status, updated_at: Math.floor(Date.now()) })
+    .returning('*');
+  return updated;
+};
+
+export const getStatusesByOrder = async order_id => {
+  const rows = await db('order_item as oi')
+    .select('oi.status')
+    .where('oi.order_id', order_id)
+    .andWhere('oi.deleted_at', null);
+  return rows.map(r => r.status);
+};
+
 export const create = async data => {
   return await orderItemRepository.create(data);
 };
