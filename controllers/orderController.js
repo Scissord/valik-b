@@ -4,6 +4,7 @@ import * as Product from '#models/product.js';
 import formatDate from '#utils/formatDate.js';
 import { sendOrderNotification as sendClientNotification } from '#utils/telegramNotifier.js';
 import { sendOrderNotification as sendManagerNotification } from '#utils/telegramManagerBot.js';
+import { sendOrderNotification as sendSupplierNotification } from '#utils/telegramSupplierBot.js';
 
 export const get = async (req, res) => {
   const user = req.user;
@@ -52,7 +53,7 @@ export const create = async (req, res) => {
     const product = await Product.find(item.id);
     const item_total = +item.quantity * +product.price;
 
-    await OrderItem.create({
+    const orderItem = await OrderItem.create({
       order_id: order.id,
       product_id: item.id,
       total: item_total,
@@ -61,6 +62,8 @@ export const create = async (req, res) => {
 
     // Добавляем информацию о товаре для уведомления
     orderItems.push({
+      id: orderItem.id,
+      product_id: item.id,
       name: product.title || product.name,
       quantity: item.quantity,
       total: item_total
@@ -78,6 +81,8 @@ export const create = async (req, res) => {
     await sendClientNotification(updatedOrder, orderItems);
     // Отправляем уведомление менеджеру
     await sendManagerNotification(updatedOrder, orderItems);
+    // Отправляем уведомление поставщикам
+    await sendSupplierNotification(updatedOrder, orderItems);
   } catch (error) {
     // Продолжаем выполнение, даже если отправка уведомления не удалась
   }

@@ -4,6 +4,7 @@ import * as Order from '#models/order.js';
 import * as OrderItem from '#models/order_item.js';
 import * as Product from '#models/product.js';
 import * as Supplier from '#models/supplier.js';
+import * as User from '#models/user.js';
 import * as telegramAuth from './telegramAuth.js';
 
 dotenv.config();
@@ -238,32 +239,65 @@ async function showSupplierItem(chatId, itemId) {
     bot.sendMessage(chatId, 'Позиция не найдена.');
     return;
   }
+  
+  // Получаем информацию о товаре
   const product = await Product.find(item.product_id);
-  const name = product ? (product.title || product.name) : `Товар #${item.product_id}`;
+  const productName = product ? (product.title || product.name) : `Товар #${item.product_id}`;
+  
+  // Получаем информацию о заказе
+  const order = await Order.find(item.order_id);
+  
+  // Получаем информацию о клиенте
+  let clientInfo = 'Не указан';
+  let clientPhone = '';
+  if (order && order.user_id) {
+    const client = await User.find(order.user_id);
+    if (client) {
+      clientInfo = client.name || client.login || `ID: ${client.id}`;
+      if (client.phone) {
+        clientPhone = client.phone;
+      }
+    }
+  }
 
-  let message = `*Позиция #${item.id}*
-`;
-  message += `Товар: ${name}
-`;
-  message += `Количество: ${item.quantity}
-`;
-  message += `Сумма: ${item.total} ₸
-`;
-  message += `Статус: ${item.status}
-`;
+  let message = `🛍️ *Позиция #${item.id}*\n\n`;
+  
+  // Информация о товаре
+  message += `📦 *Товар:* ${productName}\n`;
+  if (product) {
+    if (product.article) message += `🏷️ *Артикул:* ${product.article}\n`;
+    if (product.price) message += `💰 *Цена за единицу:* ${product.price} ₸\n`;
+    if (product.description) {
+      const shortDesc = product.description.length > 100 
+        ? product.description.substring(0, 100) + '...' 
+        : product.description;
+      message += `📝 *Описание:* ${shortDesc}\n`;
+    }
+  }
+  
+  message += `\n📊 *Детали позиции:*\n`;
+  message += `🔢 *Количество:* ${item.quantity}\n`;
+  message += `💵 *Сумма позиции:* ${item.total} ₸\n`;
+  message += `📋 *Статус позиции:* ${item.status}\n`;
+  
+  message += `\n🛒 *Информация о заказе:*\n`;
+  message += `👤 *Клиент:* ${clientInfo}\n`;
+  if (clientPhone) {
+    message += `📞 *Телефон:* ${clientPhone}\n`;
+  }
 
   const keyboard = {
     inline_keyboard: [
       [
-        { text: 'В сборке', callback_data: `itemstatus:${item.id}:1` },
-        { text: 'Готов к отправке', callback_data: `itemstatus:${item.id}:2` }
+        { text: '🔧 В сборке', callback_data: `itemstatus:${item.id}:1` },
+        { text: '📦 Готов к отправке', callback_data: `itemstatus:${item.id}:2` }
       ],
       [
-        { text: 'В пути', callback_data: `itemstatus:${item.id}:3` },
-        { text: 'Доставлен', callback_data: `itemstatus:${item.id}:4` }
+        { text: '🚚 В пути', callback_data: `itemstatus:${item.id}:3` },
+        { text: '✅ Доставлен', callback_data: `itemstatus:${item.id}:4` }
       ],
-      [{ text: 'Отменить', callback_data: `itemstatus:${item.id}:5` }],
-      [{ text: 'Назад', callback_data: 'supplier:items' }]
+      [{ text: '❌ Отменить', callback_data: `itemstatus:${item.id}:5` }],
+      [{ text: '⬅️ Назад', callback_data: 'supplier:items' }]
     ]
   };
 
@@ -290,3 +324,92 @@ async function changeItemStatus(chatId, itemId, status) {
 }
 
 export { bot };
+
+/**
+ * Отправляет уведомление поставщикам о новом заказе
+ * @param {Object} order - Объект заказа
+ * @param {Array} items - Товары в заказе
+ */
+export const sendOrderNotification = async (order, items) => {
+  if (!bot) {
+    console.error('Telegram бот для поставщиков не настроен. Проверьте переменную окружения TELEGRAM_SUPPLIER_BOT_TOKEN');
+    return;
+  }
+
+  try {
+    // Группируем товары по поставщикам
+    const supplierItems = {};
+    
+    for (const item of items) {
+      const product = await Product.find(item.product_id);
+      if (product && product.supplier_id) {
+        if (!supplierItems[product.supplier_id]) {
+          supplierItems[product.supplier_id] = [];
+        }
+        supplierItems[product.supplier_id].push({
+          ...item,
+          product_name: product.title || product.name || `Товар #${product.id}`
+        });
+      }
+    }
+
+    // Получаем информацию о клиенте
+    const client = await User.find(order.user_id);
+    const clientName = client ? (client.name || client.login || 'Клиент') : 'Клиент';
+
+    // Отправляем уведомления каждому поставщику
+    for (const [supplierId, supplierItemsList] of Object.entries(supplierItems)) {
+      try {
+        // Получаем информацию о поставщике
+        const supplier = await Supplier.find(supplierId);
+        if (!supplier || !supplier.telegram_id) {
+          console.log(`Поставщик ${supplierId} не имеет Telegram ID`);
+          continue;
+        }
+
+        // Формируем сообщение для поставщика
+        let message = `🆕 *Новый заказ #${order.id}*\n\n`;
+        message += `👤 Клиент: ${clientName}\n`;
+        message += `📅 Дата: ${new Date(order.created_at).toLocaleString('ru-RU')}\n\n`;
+        message += `📦 *Ваши позиции:*\n`;
+
+        let totalSupplierAmount = 0;
+        for (const item of supplierItemsList) {
+          message += `• ${item.product_name}\n`;
+          message += `  Количество: ${item.quantity} шт.\n`;
+          message += `  Сумма: ${item.total} ₸\n\n`;
+          totalSupplierAmount += parseFloat(item.total) || 0;
+        }
+
+        message += `💰 *Общая сумма ваших позиций: ${totalSupplierAmount} ₸*\n\n`;
+        message += `📱 Используйте команду /menu для управления заказами`;
+
+        // Создаем кнопки для быстрых действий
+        const keyboard = {
+          inline_keyboard: [
+            [
+              { text: 'Мои позиции', callback_data: 'supplier:items' }
+            ],
+            [
+              { text: 'Фильтр по статусу', callback_data: 'supplier:filter' }
+            ]
+          ]
+        };
+
+        // Отправляем уведомление поставщику
+        await bot.sendMessage(supplier.telegram_id, message, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard
+        });
+
+        console.log(`Уведомление о заказе #${order.id} отправлено поставщику ${supplier.name || supplier.login}`);
+
+      } catch (err) {
+        console.error(`Ошибка отправки уведомления поставщику ${supplierId}:`, err.message);
+      }
+    }
+
+  } catch (error) {
+    console.error('Ошибка отправки уведомлений поставщикам:', error.message);
+  }
+};
