@@ -12,6 +12,7 @@ import searchRoutes from './searchRoute.js';
 import brandRoutes from './brandRoute.js';
 import unitRoutes from './unitRoute.js';
 import managerRoutes from './managerRoute.js';
+import userRoutes from './userRoute.js';
 
 const router = express.Router();
 
@@ -28,9 +29,14 @@ router.use('/search', searchRoutes);
 router.use('/brands', brandRoutes);
 router.use('/units', unitRoutes);
 router.use('/managers', managerRoutes);
-router.use('/uploads', (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static('uploads'));
+router.use('/users', userRoutes);
+router.use(
+  '/uploads',
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static('uploads')
+);
 
 export default router;
