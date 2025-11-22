@@ -5,6 +5,8 @@
 export const seed = async knex => {
   await knex('product').del();
   await knex.raw(`SELECT setval('product_id_seq', 1, false)`);
+  await knex('product_import_log').del();
+  await knex.raw(`SELECT setval('product_import_log_id_seq', 1, false)`);
   await knex('category').del();
   await knex.raw(`SELECT setval('category_id_seq', 1, false)`);
   await knex('brand').del();

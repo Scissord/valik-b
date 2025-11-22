@@ -7,21 +7,25 @@ import * as telegramAuth from './telegramAuth.js';
  * Инициализирует Telegram ботов при запуске сервера
  */
 export const initTelegramBot = () => {
+  const attachOneTimeErrorLogger = (botInstance, eventName, prefix) => {
+    if (!botInstance) return;
+
+    let logged = false;
+    botInstance.on(eventName, error => {
+      if (logged) return;
+      logged = true;
+      console.error(prefix, error?.message || error);
+    });
+  };
+
   // Инициализация клиентского бота
   if (!clientBot) {
     console.log('Telegram клиентский бот не настроен. Проверьте переменные окружения TELEGRAM_CLIENT_BOT_TOKEN и TELEGRAM_CLIENT_CHAT_ID');
   } else {
     console.log('Telegram клиентский бот успешно инициализирован');
     
-    // Обработка ошибок бота
-    clientBot.on('polling_error', (error) => {
-      console.error('Ошибка в работе Telegram клиентского бота:', error.message);
-    });
-    
-    // Логирование ошибок webhook
-    clientBot.on('webhook_error', (error) => {
-      console.error('Ошибка webhook Telegram клиентского бота:', error.message);
-    });
+    attachOneTimeErrorLogger(clientBot, 'polling_error', 'Ошибка в работе Telegram клиентского бота:');
+    attachOneTimeErrorLogger(clientBot, 'webhook_error', 'Ошибка webhook Telegram клиентского бота:');
   }
   
   // Инициализация бота для менеджеров
@@ -30,15 +34,8 @@ export const initTelegramBot = () => {
   } else {
     console.log('Telegram бот для менеджеров успешно инициализирован');
     
-    // Обработка ошибок бота
-    managerBot.on('polling_error', (error) => {
-      console.error('Ошибка в работе Telegram бота для менеджеров:', error.message);
-    });
-    
-    // Логирование ошибок webhook
-    managerBot.on('webhook_error', (error) => {
-      console.error('Ошибка webhook Telegram бота для менеджеров:', error.message);
-    });
+    attachOneTimeErrorLogger(managerBot, 'polling_error', 'Ошибка в работе Telegram бота для менеджеров:');
+    attachOneTimeErrorLogger(managerBot, 'webhook_error', 'Ошибка webhook Telegram бота для менеджеров:');
   }
 
   // Инициализация бота для поставщиков
@@ -46,12 +43,8 @@ export const initTelegramBot = () => {
     console.log('Telegram бот для поставщиков не настроен. Проверьте TELEGRAM_SUPPLIER_BOT_TOKEN');
   } else {
     console.log('Telegram бот для поставщиков успешно инициализирован');
-    supplierBot.on('polling_error', (error) => {
-      console.error('Ошибка в работе Telegram бота для поставщиков:', error.message);
-    });
-    supplierBot.on('webhook_error', (error) => {
-      console.error('Ошибка webhook Telegram бота для поставщиков:', error.message);
-    });
+    attachOneTimeErrorLogger(supplierBot, 'polling_error', 'Ошибка в работе Telegram бота для поставщиков:');
+    attachOneTimeErrorLogger(supplierBot, 'webhook_error', 'Ошибка webhook Telegram бота для поставщиков:');
   }
 
   // Настройка периодической очистки сессий

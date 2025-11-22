@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: [
       // for development supplier
-      'http://localhost:5173',
+      'http://localhost:5174',
       // for prebuild preview supplier
       'http://localhost:4173',
       // for development frontend

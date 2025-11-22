@@ -1,13 +1,121 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { parse } from 'csv-parse/sync';
+import knex from '#models/knex.js';
 import * as Supplier from '#models/supplier.js';
 import * as SupplierToken from '#models/supplier_token.js';
 import * as Product from '#models/product.js';
 import * as ProductImage from '#models/product_image.js';
+import * as ProductImportLog from '#models/product_import_log.js';
 import * as File from '#models/file.js'; 
 import * as OrderItem from '#models/order_item.js';
 import * as Order from '#models/order.js';
 import generateTokens from '#utils/tokens/generateSupplierTokens.js';
+
+const db = knex();
+
+const normalizeString = value => (typeof value === 'string' ? value.trim() : '');
+
+const parseNumber = value => {
+  if (value === undefined || value === null || value === '') return null;
+
+  const normalized = String(value).replace(',', '.').trim();
+  const numeric = Number.parseFloat(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const parsePrice = value => {
+  const raw = normalizeString(value);
+  if (!raw) return 0;
+
+  const cleaned = raw.replace(/\s+/g, '').replace(',', '.');
+  const numeric = Number.parseFloat(cleaned);
+  if (!Number.isFinite(numeric) || numeric < 0) return 0;
+
+  return Math.round(numeric);
+};
+
+const parseRowNumber = (row, index) => {
+  const raw = row['№'] ?? row['No'] ?? row['#'];
+  const parsed = Number.parseInt(raw, 10);
+
+  return Number.isFinite(parsed) ? parsed : index + 1;
+};
+
+const parseArticle = value => {
+  const raw = normalizeString(value);
+  if (!raw) return null;
+
+  const parsed = Number.parseInt(raw, 10);
+  const MIN_INT = -2147483648;
+  const MAX_INT = 2147483647;
+
+  if (!Number.isFinite(parsed) || parsed < MIN_INT || parsed > MAX_INT) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const findEntityByTitle = async (tableName, title, cache, { createIfMissing = false } = {}) => {
+  const normalized = normalizeString(title).toLowerCase();
+  if (!normalized) return null;
+
+  if (cache.has(normalized)) {
+    return cache.get(normalized);
+  }
+
+  const record = await db(tableName)
+    .select('*')
+    .whereRaw('LOWER(title) = ?', [normalized])
+    .whereNull('deleted_at')
+    .first();
+
+  if (record) {
+    cache.set(normalized, record);
+    return record;
+  }
+
+  if (createIfMissing) {
+    const [created] = await db(tableName)
+      .insert({ title: normalizeString(title) })
+      .returning('*');
+    cache.set(normalized, created || null);
+    return created || null;
+  }
+
+  cache.set(normalized, null);
+  return null;
+};
+
+const resolveUnitId = async providedId => {
+  if (providedId) {
+    const unit = await db('unit')
+      .select('id')
+      .where('id', providedId)
+      .whereNull('deleted_at')
+      .first();
+
+    return unit?.id || null;
+  }
+
+  const unit = await db('unit').select('id').whereNull('deleted_at').orderBy('id', 'asc').first();
+  if (unit?.id) return unit.id;
+
+  const [createdUnit] = await db('unit')
+    .insert({ title: 'шт' })
+    .returning(['id']);
+
+  return createdUnit?.id || null;
+};
+
+const normalizeErrorsPayload = errors =>
+  JSON.stringify(
+    (Array.isArray(errors) ? errors : []).map(item => ({
+      row: Number.isFinite(Number(item?.row)) ? Number(item.row) : null,
+      message: String(item?.message ?? '')
+    }))
+  );
 
 export const supplierLogin = async (req, res) => {
   let { login, password } = req.body;
@@ -196,6 +304,205 @@ export const getProducts = async (req, res) => {
     res.status(200).send(data);
   } catch (err) {
     console.log('Error in get products for suppliers controller', err.message);
+    res.status(500).send({ error: 'Internal Server Error' });
+  }
+};
+
+export const importProducts = async (req, res) => {
+  const supplier_id = req.supplier.id;
+
+  let logEntry;
+
+  try {
+    logEntry = await ProductImportLog.create({
+      supplier_id,
+      status: 'processing',
+      row_count: 0,
+      errors: normalizeErrorsPayload([])
+    });
+
+    if (!req.file) {
+      await ProductImportLog.update(logEntry.id, {
+        status: 'failed',
+        row_count: 0,
+        errors: normalizeErrorsPayload([{ row: null, message: 'CSV файл не был загружен' }])
+      });
+
+      res.status(400).send({ message: 'CSV файл обязателен', importId: logEntry.id });
+      return;
+    }
+
+    const allowedMimes = ['text/csv', 'application/csv', 'application/vnd.ms-excel', 'text/plain'];
+    if (req.file.mimetype && !allowedMimes.includes(req.file.mimetype)) {
+      await ProductImportLog.update(logEntry.id, {
+        status: 'failed',
+        row_count: 0,
+        errors: [{ row: null, message: 'Некорректный тип файла, ожидается CSV' }]
+      });
+
+      res
+        .status(400)
+        .send({ message: 'Некорректный тип файла, ожидается CSV', importId: logEntry.id });
+      return;
+    }
+
+    let rows = [];
+    try {
+      rows = parse(req.file.buffer, {
+        columns: true,
+        skip_empty_lines: true,
+        bom: true,
+        trim: true
+      });
+    } catch (err) {
+      await ProductImportLog.update(logEntry.id, {
+        status: 'failed',
+        row_count: 0,
+        errors: normalizeErrorsPayload([
+          { row: null, message: `Не удалось разобрать CSV: ${err.message}` }
+        ])
+      });
+
+      res.status(400).send({ message: 'Не удалось прочитать CSV файл', importId: logEntry.id });
+      return;
+    }
+
+    if (!rows.length) {
+      await ProductImportLog.update(logEntry.id, {
+        status: 'failed',
+        row_count: 0,
+        errors: normalizeErrorsPayload([{ row: null, message: 'CSV файл не содержит строк для импорта' }])
+      });
+
+      res.status(400).send({ message: 'CSV файл пустой', importId: logEntry.id });
+      return;
+    }
+
+    const brandCache = new Map();
+    const categoryCache = new Map();
+  const errors = [];
+
+  const categoryAliasMap = {
+    'шпатлевка': 'Шпатлёвки',
+    'шпатлевки': 'Шпатлёвки',
+    'шпатлёвка': 'Шпатлёвки',
+    'штукатурка': 'Декоративные штукатурки',
+    'краски и лаки': 'Лаки, краски, клей',
+    'грунтовка': 'Грунтовки'
+  };
+
+  const unitIdInput = req.body?.unit_id ? Number(req.body.unit_id) : null;
+  const unit_id = await resolveUnitId(unitIdInput);
+  if (!unit_id) {
+    await ProductImportLog.update(logEntry.id, {
+      status: 'failed',
+        row_count: rows.length,
+        errors: normalizeErrorsPayload([
+          { row: null, message: 'Не удалось определить единицу измерения' }
+        ])
+      });
+
+      res
+        .status(400)
+        .send({ message: 'Не удалось определить единицу измерения', importId: logEntry.id });
+      return;
+    }
+
+    const productsToInsert = [];
+
+    for (const [index, row] of rows.entries()) {
+      const rowNumber = parseRowNumber(row, index);
+      const title = normalizeString(row['Наименование']);
+      const brandTitle = normalizeString(row['Бренд']);
+      const rawCategoryTitle = normalizeString(row['Категория']);
+      const categoryTitle =
+        categoryAliasMap[rawCategoryTitle.toLowerCase?.() ? rawCategoryTitle.toLowerCase() : ''] ||
+        rawCategoryTitle;
+      const description = normalizeString(row['Описание']) || '';
+
+      if (!title) {
+        errors.push({ row: rowNumber, message: 'Не заполнено поле "Наименование"' });
+        continue;
+      }
+
+      if (!brandTitle) {
+        errors.push({ row: rowNumber, message: 'Не указан бренд' });
+        continue;
+      }
+
+      if (!categoryTitle) {
+        errors.push({ row: rowNumber, message: 'Не указана категория' });
+        continue;
+      }
+
+    const brand = await findEntityByTitle('brand', brandTitle, brandCache, { createIfMissing: true });
+
+    const category = await findEntityByTitle('category', categoryTitle, categoryCache, {
+      createIfMissing: true
+    });
+
+    const article = parseArticle(row['Артикул']);
+
+    const weight = parseNumber(row['Вес_кг']);
+    const width = parseNumber(row['Ширина']);
+    const height = parseNumber(row['Высота']);
+      const price =
+        parsePrice(row['Цена продажи']) ??
+        parsePrice(row['Цена']) ??
+        parsePrice(row['price']) ??
+        0;
+
+    productsToInsert.push({
+      title,
+      description,
+      brand_id: brand.id,
+        unit_id,
+        category_id: category.id,
+        supplier_id,
+        article: Number.isFinite(article) ? article : null,
+        weight,
+        width,
+        height,
+        price,
+        rating: 0
+      });
+    }
+
+    let inserted = [];
+    if (productsToInsert.length) {
+      try {
+        inserted = await Product.createMany(productsToInsert);
+      } catch (err) {
+        errors.push({ row: null, message: `Ошибка сохранения товаров: ${err.message}` });
+      }
+    }
+
+    const status = errors.length === 0 ? 'success' : inserted.length ? 'partial' : 'failed';
+
+    await ProductImportLog.update(logEntry.id, {
+      status,
+      row_count: rows.length,
+      errors: normalizeErrorsPayload(errors)
+    });
+
+    res.status(status === 'failed' ? 400 : 200).send({
+      importId: logEntry.id,
+      imported: inserted.length,
+      skipped: rows.length - inserted.length,
+      errors
+    });
+  } catch (err) {
+    console.log('Error in import products for suppliers controller', err.message);
+
+    if (logEntry) {
+      await ProductImportLog.update(logEntry.id, {
+        status: 'failed',
+        errors: normalizeErrorsPayload([
+          { row: null, message: 'Внутренняя ошибка при импорте товаров' }
+        ])
+      });
+    }
+
     res.status(500).send({ error: 'Internal Server Error' });
   }
 };

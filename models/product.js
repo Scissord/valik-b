@@ -111,6 +111,10 @@ export const create = async data => {
   return await productRepository.create(data);
 };
 
+export const createMany = async data => {
+  return await productRepository.createMany(data);
+};
+
 export const update = async (id, data) => {
   return await productRepository.update(id, data);
 };

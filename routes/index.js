@@ -23,6 +23,7 @@ router.use('/payment_methods', paymentMethodRoutes);
 router.use('/aws', awsRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/api/assistant', assistantRoutes);
+router.use('/supplier', supplierRoutes);
 router.use('/suppliers', supplierRoutes);
 router.use('/api/chats', chatRoutes);
 router.use('/search', searchRoutes);
