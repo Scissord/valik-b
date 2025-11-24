@@ -7,6 +7,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5-mini';
+const MAX_COMPLETION_TOKENS = Number(process.env.OPENAI_MAX_COMPLETION_TOKENS) || 800;
+
 // Функция для получения оптимизированного списка продуктов (фильтрация по запросу)
 const getProductsForPrompt = async (userMessage) => {
   try {
@@ -101,10 +104,10 @@ export const getChatResponseAndSave = async (chatId, userId, userMessage) => {
     
     // Отправляем запрос в OpenAI
     const response = await openai.chat.completions.create({
-      model: 'chatgpt-5-mini',
+      model: OPENAI_MODEL,
       messages: formattedMessages,
-      temperature: 0.7,
-      max_tokens: 800
+      temperature: 1,
+      max_completion_tokens: MAX_COMPLETION_TOKENS
     });
     
     const assistantMessage = response.choices[0].message.content;
@@ -134,7 +137,7 @@ export const getConstructionAssistantResponse = async (question) => {
     const systemPrompt = BASE_SYSTEM_PROMPT + productsInfo;
     
     const response = await openai.chat.completions.create({
-      model: 'chatgpt-5-mini',
+      model: OPENAI_MODEL,
       messages: [
         {
           role: 'system',
@@ -146,7 +149,7 @@ export const getConstructionAssistantResponse = async (question) => {
         }
       ],
       temperature: 0.7,
-      max_tokens: 800
+      max_completion_tokens: MAX_COMPLETION_TOKENS
     });
 
     return response.choices[0].message.content;
