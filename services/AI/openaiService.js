@@ -101,7 +101,7 @@ export const getChatResponseAndSave = async (chatId, userId, userMessage) => {
     
     // Отправляем запрос в OpenAI
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'chatgpt-5-mini',
       messages: formattedMessages,
       temperature: 0.7,
       max_tokens: 800
@@ -134,7 +134,7 @@ export const getConstructionAssistantResponse = async (question) => {
     const systemPrompt = BASE_SYSTEM_PROMPT + productsInfo;
     
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'chatgpt-5-mini',
       messages: [
         {
           role: 'system',
