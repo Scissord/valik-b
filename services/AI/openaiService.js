@@ -9,6 +9,7 @@ const openai = new OpenAI({
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5-mini';
 const MAX_COMPLETION_TOKENS = Number(process.env.OPENAI_MAX_COMPLETION_TOKENS) || 1500;
+const USE_PRODUCTS_IN_PROMPT = process.env.OPENAI_PROMPT_WITH_PRODUCTS === 'true';
 
 // Функция для получения оптимизированного списка продуктов (фильтрация по запросу)
 const getProductsForPrompt = async (userMessage) => {
@@ -52,25 +53,17 @@ const getProductsForPrompt = async (userMessage) => {
   }
 };
 
-// Базовый системный промпт
-const BASE_SYSTEM_PROMPT = `Ты строительный ассистент интернет-магазина строительных материалов Valik.kz в Казахстане. Твоя главная задача - помочь клиентам выбрать подходящие материалы ТОЛЬКО из нашего ассортимента, а также давать строительные советы по выполнению работ (как выровнять стены, как залить бетон, как сделать стяжку пола, как подготовить поверхность и т.д.). При этом любые рекомендации по материалам должны быть ТОЛЬКО из списка товаров.
+// Базовый системный промпт (упрощённый режим)
+const BASE_SYSTEM_PROMPT = `Ты — строительный ассистент интернет-магазина Valik.kz в Казахстане. Общайся дружелюбно на русском языке, отвечай только на строительные и ремонтные вопросы, помогай с технологией работ, подбором инструментов и безопасностью. Если запрос не относится к стройке, вежливо предложи обсудить строительные задачи.`;
 
-КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА:
-1. НИКОГДА НЕ ПРИДУМЫВАЙ товары, которых нет в списке
-2. НИКОГДА НЕ УКАЗЫВАЙ несуществующие ID или названия
-3. РЕКОМЕНДУЙ ТОЛЬКО товары из предоставленного списка
-4. ВСЕГДА проверяй ID продукта перед рекомендацией
-5. Если нужного товара НЕТ в списке — честно скажи об этом
-6. Предлагай аналоги ТОЛЬКО из доступного ассортимента
-7. Указывай точные названия и ID из списка
-8. ВСЕ ЦЕНЫ в тенге (₸)
-9. ТЫ МОЖЕШЬ давать строительные советы (технологии работ, последовательность действий, инструменты), но материалы всегда рекомендуешь ТОЛЬКО из списка доступных товаров
+const buildSystemPrompt = async (userMessage) => {
+  if (!USE_PRODUCTS_IN_PROMPT) {
+    return BASE_SYSTEM_PROMPT;
+  }
 
-ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА:
-"Чтобы выровнять стены, сначала нанесите грунтовку. Из нашего ассортимента рекомендую: Грунтовка глубокого проникновения (ID: 44) — 1450₸. Для штукатурки подойдёт Смесь гипсовая (ID: 12) — 3200₸. Маяков, к сожалению, сейчас нет."
-
-ПРИМЕР НЕПРАВИЛЬНОГО ОТВЕТА:
-"Рекомендую цемент М500 (ID: 999)" — если такого товара нет!`;
+  const productsInfo = await getProductsForPrompt(userMessage);
+  return `${BASE_SYSTEM_PROMPT}${productsInfo}`;
+};
 
 const extractAssistantMessage = (choice) => {
   if (!choice || !choice.message) {
@@ -174,9 +167,7 @@ const buildFallbackAssistantMessage = (choice) => {
 
 export const getChatResponseAndSave = async (chatId, userId, userMessage) => {
   try {
-    // Получаем актуальный список продуктов для системного промпта
-    const productsInfo = await getProductsForPrompt(userMessage);
-    const systemPrompt = BASE_SYSTEM_PROMPT + productsInfo;
+    const systemPrompt = await buildSystemPrompt(userMessage);
     
     // Создаем новый чат, если chatId не указан
     let chat;
@@ -254,9 +245,7 @@ export const getChatResponseAndSave = async (chatId, userId, userMessage) => {
 // Для обратной совместимости
 export const getConstructionAssistantResponse = async (question) => {
   try {
-    // Получаем актуальный список продуктов для системного промпта
-    const productsInfo = await getProductsForPrompt(question);
-    const systemPrompt = BASE_SYSTEM_PROMPT + productsInfo;
+    const systemPrompt = await buildSystemPrompt(question);
     
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
