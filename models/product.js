@@ -70,7 +70,25 @@ export const getForSupplier = async (limit = 9, page = 1, supplier_id) => {
 };
 
 export const getForSearch = async () => {
-  return await db('product as p').select('p.id', 'p.title');
+  return await db('product as p')
+    .select(
+      'p.id',
+      'p.title',
+      'p.description',
+      'c.title as category',
+      db.raw(`
+        COALESCE(
+          (
+            SELECT json_agg(f.link)
+            FROM product_image pi
+            JOIN file f ON f.id = pi.file_id
+            WHERE pi.product_id = p.id AND pi.deleted_at IS NULL
+          ), '[]'
+        ) as images
+      `)
+    )
+    .leftJoin('category as c', 'c.id', 'p.category_id')
+    .whereNull('p.deleted_at');
 };
 
 export const get = async () => {

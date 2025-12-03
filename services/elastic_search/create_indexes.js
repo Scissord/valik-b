@@ -44,6 +44,8 @@ async function create_indexes() {
       id: product.id,
       title: product.title,
       description: product.description,
+      category: product.category,
+      images: product.images,
     }
   ]);
 
