@@ -10,6 +10,7 @@ const openai = new OpenAI({
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-5-mini';
 const MAX_COMPLETION_TOKENS = Number(process.env.OPENAI_MAX_COMPLETION_TOKENS) || 1500;
 const USE_PRODUCTS_IN_PROMPT = process.env.OPENAI_PROMPT_WITH_PRODUCTS === 'true';
+const USE_PRODUCTS_IN_PROMPT_EFFECTIVE = false;
 
 // Функция для получения оптимизированного списка продуктов (фильтрация по запросу)
 const getProductsForPrompt = async (userMessage) => {
@@ -54,10 +55,10 @@ const getProductsForPrompt = async (userMessage) => {
 };
 
 // Базовый системный промпт (упрощённый режим)
-const BASE_SYSTEM_PROMPT = `Ты — строительный ассистент интернет-магазина Valik.kz в Казахстане. Общайся дружелюбно на русском языке, отвечай только на строительные и ремонтные вопросы, помогай с технологией работ, подбором инструментов и безопасностью. Если запрос не относится к стройке, вежливо предложи обсудить строительные задачи.`;
+const BASE_SYSTEM_PROMPT = `Ты — строительный ассистент интернет-магазина Valik.kz в Казахстане. Общайся дружелюбно на русском языке, отвечай только на строительные и ремонтные вопросы, помогай с технологией работ, подбором инструментов и безопасностью. Если запрос не относится к стройке, вежливо предложи обсудить строительные задачи.Отвечай коротко и по делу.`;
 
 const buildSystemPrompt = async (userMessage) => {
-  if (!USE_PRODUCTS_IN_PROMPT) {
+  if (!USE_PRODUCTS_IN_PROMPT || !USE_PRODUCTS_IN_PROMPT_EFFECTIVE) {
     return BASE_SYSTEM_PROMPT;
   }
 
