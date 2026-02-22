@@ -13,6 +13,6 @@ const router = express.Router();
 router.post('/login', validate(loginValidation), controller.userLogin);
 router.post('/registration', validate(registrationValidation), controller.userRegistration);
 router.post('/logout', verify('user'), controller.userLogout);
-router.post('/refresh', verify('user'), controller.userRefresh);
+router.post('/refresh', controller.userRefresh);
 
 export default router;

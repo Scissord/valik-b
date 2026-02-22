@@ -26,7 +26,7 @@ const router = express.Router();
 router.post('/login', validate(loginValidation), controller.supplierLogin);
 router.post('/registration', validate(registrationValidation), controller.supplierRegistration);
 router.post('/logout', verify('supplier'), controller.supplierLogout);
-router.post('/refresh', verify('supplier'), controller.supplierRefresh);
+router.post('/refresh', controller.supplierRefresh);
 
 // for with supplier products
 router.post(
