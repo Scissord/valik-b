@@ -3,11 +3,37 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
 import routes from '#routes/index.js';
 import initTelegramBot from '#utils/initTelegramBot.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+const swaggerSpec = swaggerJSDoc({
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Valik API',
+      version: '1.0.0'
+    },
+    servers: [
+      { url: 'http://localhost:8080' },
+      { url: 'https://valik.kz' }
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    }
+  },
+  apis: ['./routes/*.js']
+});
 
 app.use(compression());
 app.use(helmet());
@@ -35,6 +61,8 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   })
 );
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('', routes);
 // error middleware
