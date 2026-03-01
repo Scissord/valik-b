@@ -36,7 +36,11 @@ const swaggerSpec = swaggerJSDoc({
 });
 
 app.use(compression());
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(
