@@ -26,21 +26,21 @@ const verify = (entity) => async (req, res, next) => {
         try {
           const decodedRefresh = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-          let entity;
+          let userEntity;
           if (entity === 'supplier') {
-            entity = await Supplier.find(decodedRefresh.supplierId);
+            userEntity = await Supplier.find(decodedRefresh.supplierId);
           } else if (entity === 'user') {
-            entity = await User.find(decodedRefresh.userId);
+            userEntity = await User.find(decodedRefresh.userId);
           }
 
-          if (!entity) {
+          if (!userEntity) {
             return res.status(401).send({
               message: `${entity === 'supplier' ? 'Поставщик' : 'Пользователь'} не найден!`
             });
           }
 
           return res.status(401).send({
-            message: 'Unauthorized - Invalid Access Token'
+            message: 'Unauthorized - Token Expired'
           });
         } catch (refreshError) {
           return res.status(401).send({
@@ -67,12 +67,12 @@ const verify = (entity) => async (req, res, next) => {
       });
 
     req[entity] = role;
-    
+
     // Добавляем информацию о роли для удобного доступа
     if (entity === 'user' && role.role) {
       console.log('Установка роли пользователя:', role.role);
     }
-    
+
     next();
   } catch (err) {
     console.log('Error in verify middleware', err.message);
